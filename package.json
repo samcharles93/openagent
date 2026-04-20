@@ -14,7 +14,9 @@
     "clean": "node -e \"import('node:fs/promises').then((fs) => fs.rm('.github/extensions/openagent', { recursive: true, force: true }))\"",
     "setup:agents": "node scripts/setup-copilot-agents.mjs",
     "setup:copilot": "npm run build && node scripts/setup-openagent.mjs",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "test": "npm run build && node --experimental-strip-types --test test/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck:test": "tsc -p test/tsconfig.json"
   },
   "dependencies": {
     "@ast-grep/cli": "^0.42.1",

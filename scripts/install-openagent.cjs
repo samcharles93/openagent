@@ -122,6 +122,8 @@ function main() {
 
   const binDir = process.env.OPENAGENT_BIN_DIR?.trim()
     || path.join(os.homedir(), ".local", "bin");
+  const isWindows = process.platform === "win32";
+  const wrapperName = isWindows ? "copilot-oa.ps1" : "copilot-oa";
 
   process.stdout.write(
     [
@@ -130,10 +132,10 @@ function main() {
       `Managed checkout: ${checkoutDir}`,
       `Copilot extension wrapper: ${path.join(process.env.COPILOT_EXTENSIONS_DIR || path.join(os.homedir(), ".copilot", "extensions"), "openagent")}`,
       `Native custom agents: ${path.join(process.env.COPILOT_AGENTS_DIR || path.join(os.homedir(), ".copilot", "agents"))}`,
-      `Node wrapper: ${path.join(binDir, "copilot-oa")}`,
+      `Node wrapper: ${path.join(binDir, wrapperName)}`,
       "",
       "Next steps:",
-      "1. Use `copilot-oa` for the full SDK extension (commands, tools, hooks, routing).",
+      `1. Use \`${isWindows ? "copilot-oa.ps1" : "copilot-oa"}\` for the full SDK extension (commands, tools, hooks, routing).`,
       "   Requires Node.js 24+ and @github/copilot installed via npm.",
       "2. Or use `copilot --agent openagent-planner` for native custom agents only.",
       "3. Reload VS Code windows to pick up OpenAgent custom agents.",

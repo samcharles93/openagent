@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { chmodSync, copyFileSync, existsSync, mkdirSync } from "node:fs";
+import { chmodSync, copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
@@ -22,29 +22,55 @@ function runNode(scriptPath, args) {
 }
 
 function installNodeWrapper(scriptsDir) {
-  const wrapperSource = path.join(scriptsDir, "copilot-via-node.sh");
+  const isWindows = process.platform === "win32";
+  const wrapperFilename = isWindows ? "copilot-via-node.ps1" : "copilot-via-node.sh";
+  const wrapperSource = path.join(scriptsDir, wrapperFilename);
+
   if (!existsSync(wrapperSource)) {
-    process.stderr.write("Warning: copilot-via-node.sh not found, skipping wrapper install.\n");
+    process.stderr.write(`Warning: ${wrapperFilename} not found, skipping wrapper install.\n`);
     return;
   }
 
   const binDir = process.env.OPENAGENT_BIN_DIR?.trim()
-    || path.join(os.homedir(), ".local", "bin");
+    || (isWindows
+      ? path.join(os.homedir(), ".local", "bin")
+      : path.join(os.homedir(), ".local", "bin"));
   mkdirSync(binDir, { recursive: true });
 
-  const targetPath = path.join(binDir, "copilot-oa");
-  copyFileSync(wrapperSource, targetPath);
-  chmodSync(targetPath, 0o755);
+  if (isWindows) {
+    const targetPath = path.join(binDir, "copilot-oa.ps1");
+    copyFileSync(wrapperSource, targetPath);
 
-  process.stdout.write(
-    [
-      "",
-      `Installed copilot-oa wrapper at ${targetPath}`,
-      "Use 'copilot-oa' instead of 'copilot' to enable SDK extension support.",
-      `Make sure ${binDir} is in your PATH.`,
-      "",
-    ].join("\n"),
-  );
+    // Also create a .cmd shim so copilot-oa works from cmd.exe
+    const cmdShimPath = path.join(binDir, "copilot-oa.cmd");
+    const cmdShimContent = '@powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0copilot-oa.ps1" %*\r\n';
+    writeFileSync(cmdShimPath, cmdShimContent, "utf8");
+
+    process.stdout.write(
+      [
+        "",
+        `Installed copilot-oa wrapper at ${targetPath}`,
+        `Installed cmd shim at ${cmdShimPath}`,
+        "Use 'copilot-oa' instead of 'copilot' to enable SDK extension support.",
+        `Make sure ${binDir} is in your PATH.`,
+        "",
+      ].join("\n"),
+    );
+  } else {
+    const targetPath = path.join(binDir, "copilot-oa");
+    copyFileSync(wrapperSource, targetPath);
+    chmodSync(targetPath, 0o755);
+
+    process.stdout.write(
+      [
+        "",
+        `Installed copilot-oa wrapper at ${targetPath}`,
+        "Use 'copilot-oa' instead of 'copilot' to enable SDK extension support.",
+        `Make sure ${binDir} is in your PATH.`,
+        "",
+      ].join("\n"),
+    );
+  }
 }
 
 function main() {
