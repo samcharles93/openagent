@@ -1,0 +1,28 @@
+{
+  "name": "openagent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Copilot CLI extension harness for orchestration-first software work",
+  "type": "module",
+  "author": "Sam Catlow",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "node -e \"import('node:fs/promises').then((fs) => fs.rm('.github/extensions/openagent', { recursive: true, force: true }))\"",
+    "setup:copilot": "npm run build && node scripts/setup-copilot-extension.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@ast-grep/cli": "^0.42.1",
+    "@github/copilot": "^1.0.32",
+    "@github/copilot-sdk": "^0.2.2",
+    "jsonc-parser": "^3.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "typescript": "^6.0.3"
+  }
+}

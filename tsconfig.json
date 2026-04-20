@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noEmitOnError": true,
+    "rootDir": "src",
+    "outDir": ".github/extensions/openagent",
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.ts", "src/**/*.mts"],
+  "exclude": ["node_modules", ".github/extensions/openagent"]
+}
