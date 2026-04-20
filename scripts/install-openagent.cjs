@@ -5,7 +5,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 
-const DEFAULT_REPO_URL = "https://github.com/samcharles93/oh-my-copilot.git";
+const DEFAULT_REPO_URL = "https://github.com/samcharles93/openagent.git";
 const DEFAULT_BRANCH = "main";
 const DEFAULT_INSTALL_ROOT = path.join(os.homedir(), ".copilot", "openagent");
 
@@ -120,17 +120,24 @@ function main() {
 
   writeFileSync(metadataPath, `${JSON.stringify(metadata, null, 2)}\n`, "utf8");
 
+  const binDir = process.env.OPENAGENT_BIN_DIR?.trim()
+    || path.join(os.homedir(), ".local", "bin");
+
   process.stdout.write(
     [
       "",
       "OpenAgent is installed for GitHub Copilot CLI.",
       `Managed checkout: ${checkoutDir}`,
       `Copilot extension wrapper: ${path.join(process.env.COPILOT_EXTENSIONS_DIR || path.join(os.homedir(), ".copilot", "extensions"), "openagent")}`,
+      `Native custom agents: ${path.join(process.env.COPILOT_AGENTS_DIR || path.join(os.homedir(), ".copilot", "agents"))}`,
+      `Node wrapper: ${path.join(binDir, "copilot-oa")}`,
       "",
       "Next steps:",
-      "1. Restart `copilot`, or run `/clear` in an existing session.",
-      "2. Start using OpenAgent with `/oa-start <request>`.",
-      "3. Re-run this installer any time you want to refresh the managed checkout.",
+      "1. Use `copilot-oa` for the full SDK extension (commands, tools, hooks, routing).",
+      "   Requires Node.js 24+ and @github/copilot installed via npm.",
+      "2. Or use `copilot --agent openagent-planner` for native custom agents only.",
+      "3. Reload VS Code windows to pick up OpenAgent custom agents.",
+      "4. Re-run this installer any time you want to refresh the managed checkout.",
     ].join("\n"),
   );
 }

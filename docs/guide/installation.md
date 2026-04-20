@@ -1,38 +1,65 @@
 # OpenAgent installation guide
 
-Install OpenAgent for GitHub Copilot CLI with this one-command bootstrap:
+Install OpenAgent for GitHub Copilot CLI and VS Code Copilot with this one-command bootstrap:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/samcharles93/oh-my-copilot/main/scripts/install-openagent.cjs | node
+curl -fsSL https://raw.githubusercontent.com/samcharles93/openagent/main/scripts/install-openagent.cjs | node
 ```
 
 ## What the installer does
 
-1. Clones `https://github.com/samcharles93/oh-my-copilot.git` into `~/.copilot/openagent/repo`
+1. Clones `https://github.com/samcharles93/openagent.git` into `~/.copilot/openagent/repo`
 2. Runs `npm install`
 3. Runs `npm run setup:copilot -- --force`
 4. Installs a user-scoped Copilot extension wrapper at `~/.copilot/extensions/openagent/extension.mjs`
+5. Installs native custom agent profiles at `~/.copilot/agents/*.agent.md`
+6. Installs `copilot-oa` wrapper at `~/.local/bin/copilot-oa`
 
-GitHub Copilot CLI discovers user extensions from `~/.copilot/extensions/<name>/extension.mjs`, so the installer configures that directory before any `/oa-*` command is available.
+GitHub Copilot CLI discovers user extensions from `~/.copilot/extensions/<name>/extension.mjs`, so the installer configures that directory before any `/oa-*` command is available. Copilot CLI and VS Code discover native custom agents from `~/.copilot/agents`, and this repository also ships workspace-level profiles under `.github/agents`.
 
 ## Requirements
 
-- GitHub Copilot CLI already installed
-- Node.js 20+
+- GitHub Copilot CLI already installed (`npm install -g @github/copilot`)
+- Node.js 24+ for the SDK extension (`copilot-oa` wrapper)
+- Node.js 20+ for native agents only
 - `git`
 - `npm`
 
 ## After installation
 
 1. Restart `copilot`, or run `/clear` if you already have a session open
-2. Confirm the extension loaded with `/env` if you want a quick check
-3. Start with `/oa-start <request>`
+2. Reload VS Code windows that should pick up OpenAgent custom agents
+3. Confirm the extension loaded with `/env` if you want a quick check
+4. Start with `/oa-start <request>` or select an `openagent-*` custom agent
+
+### SDK extension (full features)
+
+The SDK extension provides `/oa-*` commands, tools, hooks, routing, and workspace persistence. It requires running Copilot CLI via Node.js instead of the native binary:
+
+```bash
+copilot-oa
+```
+
+The native Copilot binary uses itself as `process.execPath`, which breaks `child_process.fork()` when launching SDK extensions. The `copilot-oa` wrapper runs Copilot through Node so fork() works correctly.
+
+### Native agents only
+
+If you only need the custom agent personas (no commands/tools/hooks), use the standard binary:
+
+```bash
+copilot --agent openagent-planner
+```
 
 ## Optional overrides
 
+- `OPENAGENT_REPO_URL=https://github.com/<owner>/<repo>.git` overrides the managed checkout source
 - `OPENAGENT_INSTALL_ROOT=/custom/path` changes where the managed repo checkout lives
 - `COPILOT_EXTENSIONS_DIR=/custom/extensions` changes where the user-scoped extension wrapper is written
+- `COPILOT_AGENTS_DIR=/custom/agents` changes where native custom agent profiles are written
+- `OPENAGENT_BIN_DIR=/custom/bin` changes where `copilot-oa` is installed (default: `~/.local/bin`)
 
 ## Refreshing the install
 
 Run the same command again. The installer recreates the managed checkout and refreshes the Copilot wrapper.
+
+For local development, run `npm run setup:copilot` after moving the checkout or rebuilding the extension. Run `npm run setup:agents` when you only need to refresh native custom agent profiles.

@@ -18,6 +18,7 @@ OpenAgent is a Copilot CLI extension harness for orchestration-first work. Sourc
 
 - Entry point: `src/extension.mts`
 - Agents: `src/agents.ts`
+- Native Copilot agents: `.github/agents/*.agent.md`
 - Routing/handoffs: `src/routing.ts`
 - Commands: `src/commands.ts`
 - Tools/tasks: `src/tools.ts`, `src/task-tools.ts`
@@ -77,6 +78,8 @@ Durable notes, routing handoffs, and related artifacts live under `files/openage
 
 - Edit `src/`, not `.github/extensions/openagent/`
 - Keep claims source-backed; do not document aspirational behavior
+- Keep published docs, package metadata, installer defaults, and examples free of local machine paths, private network addresses, secrets, and accidental personal data
+- Keep SDK custom agents in `src/agents.ts` and native Copilot profiles in `.github/agents/*.agent.md` behaviorally aligned
 - Prefer the existing plan, route, workspace, and task abstractions over parallel ad hoc flows
 - Honor `tsconfig.json` (`ES2022`, `NodeNext`, `strict`)
 - Keep `AGENTS.md` dense and front-loaded; the first ~4000 characters matter most at runtime

@@ -1,15 +1,29 @@
-# OpenAgent for GitHub Copilot CLI
+# OpenAgent for GitHub Copilot
 
-OpenAgent adds orchestration-first planning, routing, handoffs, review workflows, durable workspace notes, and specialist personas to GitHub Copilot CLI.
+OpenAgent adds orchestration-first planning, routing, handoffs, review workflows, durable workspace notes, and specialist personas to GitHub Copilot CLI and VS Code Copilot.
+
+## Two modes of operation
+
+OpenAgent ships both **native custom agents** (`.agent.md` files) and a full **SDK extension** with commands, tools, hooks, and routing.
+
+| Feature | Native agents | SDK extension |
+|---|---|---|
+| Custom agent personas (planner, critic, implementer, …) | ✓ | ✓ |
+| `/oa-*` slash commands | — | ✓ |
+| OpenAgent tools (24 tools) | — | ✓ |
+| Hooks (plan bias, guardrails, context loading) | — | ✓ |
+| Phase routing and workspace persistence | — | ✓ |
+| Continuation loops (`/oa-loop`) | — | ✓ |
+| Handoff artifacts | — | ✓ |
+
+Native agents work with the standard `copilot` binary. The SDK extension requires running Copilot via Node (see below).
 
 ## Installation
 
 ### For humans
 
-Copy and paste this into a terminal:
-
 ```bash
-curl -fsSL https://raw.githubusercontent.com/samcharles93/oh-my-copilot/main/scripts/install-openagent.cjs | node
+curl -fsSL https://raw.githubusercontent.com/samcharles93/openagent/main/scripts/install-openagent.cjs | node
 ```
 
 That command:
@@ -18,12 +32,25 @@ That command:
 2. Installs dependencies
 3. Builds the extension
 4. Registers a user-scoped Copilot extension wrapper in `~/.copilot/extensions/openagent`
+5. Installs native custom agent profiles in `~/.copilot/agents`
+6. Installs `copilot-oa` wrapper at `~/.local/bin/copilot-oa`
 
-After it finishes, restart `copilot` or run `/clear`, then start with:
+### Using OpenAgent
 
-```text
-/oa-start <request>
+**Native agents only** (works with the standard binary):
+
+```bash
+copilot --agent openagent-planner
 ```
+
+**Full SDK extension** (requires the Node wrapper):
+
+```bash
+copilot-oa
+# then: /oa-start <request>
+```
+
+The `copilot-oa` wrapper runs Copilot CLI via Node instead of the native binary. This is needed because the native binary's `process.execPath` breaks `child_process.fork()` when launching SDK extensions. Running via Node keeps `process.execPath` pointing at the Node binary so fork() works correctly.
 
 ### For LLM agents
 
@@ -31,7 +58,7 @@ Give your agent this instruction:
 
 ```text
 Install and configure OpenAgent for GitHub Copilot CLI by following the instructions here:
-https://raw.githubusercontent.com/samcharles93/oh-my-copilot/main/docs/guide/installation.md
+https://raw.githubusercontent.com/samcharles93/openagent/main/docs/guide/installation.md
 ```
 
 ## Development
@@ -43,8 +70,15 @@ npm install
 npm run setup:copilot
 ```
 
+This builds the extension, installs the Copilot extension wrapper, installs native agents, and installs the `copilot-oa` wrapper.
+
 ## Notes
 
 - The public installer uses Node, `git`, and `npm`.
+- Node.js 24+ is required for the SDK extension (the `copilot-oa` wrapper).
+- Native custom agents work with Node.js 20+.
 - Set `OPENAGENT_INSTALL_ROOT` to change where the managed checkout is cloned.
 - Set `COPILOT_EXTENSIONS_DIR` if you want Copilot to load user extensions from a non-default directory.
+- Set `COPILOT_AGENTS_DIR` if you want native custom agents written somewhere other than `~/.copilot/agents`.
+- Set `OPENAGENT_BIN_DIR` to change where `copilot-oa` is installed (default: `~/.local/bin`).
+- Run `npm run setup:agents` to refresh only the native custom agent profiles.
