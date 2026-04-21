@@ -1,9 +1,9 @@
 import type { CopilotSession } from "@github/copilot-sdk";
-import { applyAgentModelConfig } from "./agent-models.js";
-import type { OpenAgentAgentName, OpenAgentConfig } from "./config.js";
-import { isOpenAgentAgentName } from "./config.js";
-import { setCurrentAgentName } from "./hooks.js";
-import { syncFallbackState } from "./model-fallback.js";
+import { applyAgentModelConfig } from "./agent-models";
+import type { OpenAgentAgentName, OpenAgentConfig } from "./config";
+import { isOpenAgentAgentName } from "./config";
+import { setCurrentAgentName } from "./hooks";
+import { syncFallbackState } from "./model-fallback";
 
 export async function syncOpenAgentAgentState(args: {
   session: CopilotSession;

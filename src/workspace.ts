@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import * as path from "node:path";
 import type { CopilotSession } from "@github/copilot-sdk";
-import type { OpenAgentConfig } from "./config.js";
+import type { OpenAgentConfig } from "./config";
 
 export type OpenAgentWorkspacePaths = {
   workspacePath: string;

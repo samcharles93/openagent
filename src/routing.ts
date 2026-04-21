@@ -1,15 +1,15 @@
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import type { CopilotSession } from "@github/copilot-sdk";
-import { selectOpenAgentAgent } from "./agent-selection.js";
-import type { OpenAgentAgentName, OpenAgentConfig } from "./config.js";
-import { isOpenAgentAgentName } from "./config.js";
-import { updateSessionPlan } from "./plan.js";
+import { selectOpenAgentAgent } from "./agent-selection";
+import type { OpenAgentAgentName, OpenAgentConfig } from "./config";
+import { isOpenAgentAgentName } from "./config";
+import { updateSessionPlan } from "./plan";
 import {
   getOpenAgentWorkspacePaths,
   requireOpenAgentWorkspacePath,
   writeOpenAgentWorkspaceNote,
-} from "./workspace.js";
+} from "./workspace";
 
 export const OPENAGENT_PHASES = [
   "orchestrator",

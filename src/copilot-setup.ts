@@ -4,7 +4,7 @@ import {
   type CopilotSession,
   type SessionConfig,
 } from "@github/copilot-sdk";
-import { resolveBundledCopilotCliPath } from "./bundled-deps.js";
+import { resolveBundledCopilotCliPath } from "./bundled-deps";
 
 export type BundledCopilotSessionHandle = {
   client: CopilotClient;

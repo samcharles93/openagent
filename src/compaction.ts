@@ -1,11 +1,11 @@
 import type { CopilotSession } from "@github/copilot-sdk";
-import type { OpenAgentConfig } from "./config.js";
+import type { OpenAgentConfig } from "./config";
 import {
   recordCompactionComplete,
   recordCompactionStart,
   recordUsageInfo,
-} from "./telemetry.js";
-import { writeOpenAgentWorkspaceNote } from "./workspace.js";
+} from "./telemetry";
+import { writeOpenAgentWorkspaceNote } from "./workspace";
 
 export const OPENAGENT_PREEMPTIVE_COMPACTION_THRESHOLD = 0.7;
 export const OPENAGENT_BUFFER_EXHAUSTION_THRESHOLD = 0.9;

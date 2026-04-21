@@ -1,8 +1,8 @@
 import type { CopilotSession } from "@github/copilot-sdk";
 import { joinSession } from "@github/copilot-sdk/extension";
-import { initializeOpenAgentAgentState } from "./agent-selection.js";
-import { createCustomAgents } from "./agents.js";
-import { createCommands } from "./commands.js";
+import { initializeOpenAgentAgentState } from "./agent-selection";
+import { createCustomAgents } from "./agents";
+import { createCommands } from "./commands";
 import {
   formatOpenAgentCompactionStatus,
   noteOpenAgentCompactionComplete,
@@ -10,24 +10,24 @@ import {
   OPENAGENT_BUFFER_EXHAUSTION_THRESHOLD,
   OPENAGENT_PREEMPTIVE_COMPACTION_THRESHOLD,
   recordOpenAgentUsage,
-} from "./compaction.js";
-import { loadOpenAgentConfig } from "./config.js";
-import { createHooks } from "./hooks.js";
+} from "./compaction";
+import { loadOpenAgentConfig } from "./config";
+import { createHooks } from "./hooks";
 import {
   buildOpenAgentLoopPrompt,
   clearOpenAgentLoopState,
   OPENAGENT_LOOP_DONE_SENTINEL,
   readOpenAgentLoopState,
   writeOpenAgentLoopState,
-} from "./loop-state.js";
-import { createPermissionHandler } from "./permissions.js";
-import { buildSystemPrompt } from "./prompt.js";
+} from "./loop-state";
+import { createPermissionHandler } from "./permissions";
+import { buildSystemPrompt } from "./prompt";
 import {
   recordLoopCancel,
   recordLoopComplete,
   recordLoopIteration,
-} from "./telemetry.js";
-import { createTools } from "./tools.js";
+} from "./telemetry";
+import { createTools } from "./tools";
 
 const initialCwd = process.cwd();
 const initialResolution = loadOpenAgentConfig(initialCwd);

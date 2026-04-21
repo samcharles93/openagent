@@ -3,7 +3,7 @@ import type {
   OpenAgentAgentName,
   OpenAgentModelTarget,
   OpenAgentReasoningEffort,
-} from "./config.js";
+} from "./config";
 
 export type OpenAgentAgentModelConfig = {
   preferredModel?: string;

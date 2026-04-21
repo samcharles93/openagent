@@ -5,7 +5,7 @@ import type {
   PermissionRequest,
   PermissionRequestResult,
 } from "@github/copilot-sdk";
-import { loadOpenAgentConfig } from "./config.js";
+import { loadOpenAgentConfig } from "./config";
 
 type ShellPermissionRequest = PermissionRequest & {
   kind: "shell";

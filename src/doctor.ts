@@ -3,17 +3,17 @@ import type { CopilotSession } from "@github/copilot-sdk";
 import {
   resolveBundledAstGrepBinary,
   resolveBundledCopilotCliPath,
-} from "./bundled-deps.js";
-import type { OpenAgentConfig, OpenAgentConfigResolution } from "./config.js";
-import { formatConfigSummary } from "./config.js";
-import { recordContinuousImprovementArtifact } from "./continuous-improvement.js";
+} from "./bundled-deps";
+import type { OpenAgentConfig, OpenAgentConfigResolution } from "./config";
+import { formatConfigSummary } from "./config";
+import { recordContinuousImprovementArtifact } from "./continuous-improvement";
 import {
   formatOpenAgentRoutingStatus,
-} from "./routing.js";
+} from "./routing";
 import {
   isOpenAgentWorkspaceAvailable,
   writeOpenAgentWorkspaceNote,
-} from "./workspace.js";
+} from "./workspace";
 
 type BinaryCheck = {
   name: string;

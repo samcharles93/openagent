@@ -2,18 +2,18 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import * as path from "node:path";
 import type { CopilotSession } from "@github/copilot-sdk";
-import type { OpenAgentAgentName, OpenAgentConfig } from "./config.js";
+import type { OpenAgentAgentName, OpenAgentConfig } from "./config";
 import {
   getOpenAgentWorkspacePaths,
   requireOpenAgentWorkspacePath,
   writeOpenAgentWorkspaceNote,
-} from "./workspace.js";
+} from "./workspace";
 import {
   inferOpenAgentPhase,
   readOpenAgentRouteState,
   type OpenAgentMode,
   type OpenAgentPhase,
-} from "./routing.js";
+} from "./routing";
 
 export type OpenAgentHandoffArtifact = {
   version: 2;

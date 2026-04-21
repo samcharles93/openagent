@@ -1,4 +1,4 @@
-import type { OpenAgentConfig, OpenAgentConfigResolution } from "./config.js";
+import type { OpenAgentConfig, OpenAgentConfigResolution } from "./config";
 
 type PromptContextOptions = {
   forcePlan: boolean;

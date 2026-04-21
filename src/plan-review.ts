@@ -1,7 +1,7 @@
 import type { CopilotSession } from "@github/copilot-sdk";
-import type { OpenAgentConfig } from "./config.js";
-import { routeOpenAgentPhase, type OpenAgentMode, type OpenAgentRouteResult } from "./routing.js";
-import { requireOpenAgentWorkspacePath, writeOpenAgentWorkspaceNote } from "./workspace.js";
+import type { OpenAgentConfig } from "./config";
+import { routeOpenAgentPhase, type OpenAgentMode, type OpenAgentRouteResult } from "./routing";
+import { requireOpenAgentWorkspacePath, writeOpenAgentWorkspaceNote } from "./workspace";
 
 export type OpenAgentPlanReviewRequest = {
   request: string;

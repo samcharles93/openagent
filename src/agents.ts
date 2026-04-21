@@ -1,5 +1,5 @@
 import type { CustomAgentConfig } from "@github/copilot-sdk";
-import type { OpenAgentConfig } from "./config.js";
+import type { OpenAgentConfig } from "./config";
 
 function appendProjectDirectives(config: OpenAgentConfig): string {
   return config.systemDirectives.length > 0

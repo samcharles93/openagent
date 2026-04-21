@@ -2,21 +2,21 @@ import type { CopilotSession } from "@github/copilot-sdk";
 import {
   computeBootstrapConfidence,
   type BootstrapConfidence,
-} from "./bootstrap-confidence.js";
+} from "./bootstrap-confidence";
 import {
   appendBootstrapHistory,
   readBootstrapHistory,
   type BootstrapHistoryEntry,
-} from "./bootstrap-history.js";
-import type { OpenAgentConfig } from "./config.js";
-import { updateSessionPlan, type SessionPlanWriteMode } from "./plan.js";
-import { looksComplexPrompt } from "./prompt.js";
+} from "./bootstrap-history";
+import type { OpenAgentConfig } from "./config";
+import { updateSessionPlan, type SessionPlanWriteMode } from "./plan";
+import { looksComplexPrompt } from "./prompt";
 import {
   routeOpenAgentPhase,
   type OpenAgentMode,
   type OpenAgentPhase,
-} from "./routing.js";
-import { requireOpenAgentWorkspacePath } from "./workspace.js";
+} from "./routing";
+import { requireOpenAgentWorkspacePath } from "./workspace";
 
 export const OPENAGENT_BOOTSTRAP_PHASES = [
   "planner",

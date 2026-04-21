@@ -1,4 +1,4 @@
-import type { OpenAgentModelTarget } from "./config.js";
+import type { OpenAgentModelTarget } from "./config";
 
 export type OpenAgentTelemetrySnapshot = {
   sessionStartedAt: string;

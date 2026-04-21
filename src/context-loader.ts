@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { readFile, readdir } from "node:fs/promises";
 import * as path from "node:path";
-import { formatSkillsForPrompt, loadSkills } from "./skill-loader.js";
+import { formatSkillsForPrompt, loadSkills } from "./skill-loader";
 
 const MAX_SINGLE_FILE_CHARS = 4000;
 const README_TRUNCATE_CHARS = 2000;

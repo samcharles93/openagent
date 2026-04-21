@@ -2,8 +2,8 @@ import {
   formatModelTargets,
   type OpenAgentModelTarget,
   type OpenAgentReasoningEffort,
-} from "./config.js";
-import type { OpenAgentPhase } from "./routing.js";
+} from "./config";
+import type { OpenAgentPhase } from "./routing";
 
 export type OpenAgentCategory = {
   name: string;

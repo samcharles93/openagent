@@ -1,5 +1,5 @@
 import type { CopilotSession, Tool, ToolResultObject } from "@github/copilot-sdk";
-import { loadOpenAgentConfig } from "./config.js";
+import { loadOpenAgentConfig } from "./config";
 import {
   deleteOpenAgentTask,
   getReadyOpenAgentTasks,
@@ -8,7 +8,7 @@ import {
   writeOpenAgentTask,
   type OpenAgentTask,
   type OpenAgentTaskStatus,
-} from "./tasks.js";
+} from "./tasks";
 
 type SessionGetter = () => CopilotSession;
 

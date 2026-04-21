@@ -1,61 +1,61 @@
 import { existsSync } from "node:fs";
 import * as path from "node:path";
 import type { CommandDefinition, CopilotSession } from "@github/copilot-sdk";
-import { selectOpenAgentAgent } from "./agent-selection.js";
-import { initializeDeepAgents } from "./agents-md.js";
+import { selectOpenAgentAgent } from "./agent-selection";
+import { initializeDeepAgents } from "./agents-md";
 import {
   bootstrapOpenAgentTask,
   formatOpenAgentBootstrapResult,
-} from "./bootstrap.js";
+} from "./bootstrap";
 import {
   loadCustomCommands,
   renderCustomCommandPrompt,
-} from "./command-loader.js";
+} from "./command-loader";
 import {
   OPENAGENT_AGENT_NAMES,
   formatConfigSummary,
   isOpenAgentAgentName,
   loadOpenAgentConfig,
   type OpenAgentAgentName,
-} from "./config.js";
-import { runOpenAgentDoctor } from "./doctor.js";
+} from "./config";
+import { runOpenAgentDoctor } from "./doctor";
 import {
   buildOpenAgentResumeHandoff,
   readOpenAgentHandoffArtifact,
   writeOpenAgentHandoffArtifact,
-} from "./handoff.js";
+} from "./handoff";
 import {
   buildOpenAgentLoopPrompt,
   clearOpenAgentLoopState,
   writeOpenAgentLoopState,
-} from "./loop-state.js";
-import { buildOpenAgentLookAtPrompt } from "./look-at.js";
+} from "./loop-state";
+import { buildOpenAgentLookAtPrompt } from "./look-at";
 import {
   formatOpenAgentPlanReviewResult,
   startPlanReviewWorkflow,
-} from "./plan-review.js";
+} from "./plan-review";
 import {
   formatOpenAgentReviewWorkflowResult,
   startOpenAgentReviewWorkflow,
-} from "./review-workflow.js";
+} from "./review-workflow";
 import {
   formatOpenAgentRoutingStatus,
   inferOpenAgentPhase,
   isOpenAgentPhase,
   listOpenAgentPhases,
   routeOpenAgentPhase,
-} from "./routing.js";
-import { formatOpenAgentCompactionStatus } from "./compaction.js";
+} from "./routing";
+import { formatOpenAgentCompactionStatus } from "./compaction";
 import {
   formatOpenAgentTelemetry,
   recordLookAtInvocation,
   recordLoopCancel,
   recordLoopStart,
-} from "./telemetry.js";
+} from "./telemetry";
 import {
   formatOpenAgentWorkspaceRequirement,
   isOpenAgentWorkspaceAvailable,
-} from "./workspace.js";
+} from "./workspace";
 
 type SessionGetter = () => CopilotSession;
 

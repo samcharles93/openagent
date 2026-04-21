@@ -1,11 +1,11 @@
-import type { OpenAgentAgentModelConfig } from "./agent-models.js";
-import { getFallbackChain, getNextFallbackModel } from "./agent-models.js";
+import type { OpenAgentAgentModelConfig } from "./agent-models";
+import { getFallbackChain, getNextFallbackModel } from "./agent-models";
 import {
   formatModelTarget,
   type OpenAgentAgentName,
   type OpenAgentModelTarget,
-} from "./config.js";
-import { recordFallbackSwitch } from "./telemetry.js";
+} from "./config";
+import { recordFallbackSwitch } from "./telemetry";
 
 export type ModelFallbackState = {
   agentName: string;

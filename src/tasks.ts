@@ -2,8 +2,8 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile, unlink } from "node:fs/promises";
 import * as path from "node:path";
 import type { CopilotSession } from "@github/copilot-sdk";
-import type { OpenAgentConfig } from "./config.js";
-import { getOpenAgentWorkspacePaths } from "./workspace.js";
+import type { OpenAgentConfig } from "./config";
+import { getOpenAgentWorkspacePaths } from "./workspace";
 
 export type OpenAgentTaskStatus = "pending" | "in_progress" | "done" | "blocked";
 

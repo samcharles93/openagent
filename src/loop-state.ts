@@ -2,8 +2,8 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import * as path from "node:path";
 import type { CopilotSession } from "@github/copilot-sdk";
-import type { OpenAgentConfig } from "./config.js";
-import { getOpenAgentWorkspacePaths, requireOpenAgentWorkspacePath } from "./workspace.js";
+import type { OpenAgentConfig } from "./config";
+import { getOpenAgentWorkspacePaths, requireOpenAgentWorkspacePath } from "./workspace";
 
 export const OPENAGENT_LOOP_DONE_SENTINEL = "<promise>DONE</promise>";
 

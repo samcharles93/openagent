@@ -1,26 +1,26 @@
 import { existsSync } from "node:fs";
 import type { CopilotSession, SessionConfig, ToolResultObject } from "@github/copilot-sdk";
-import { loadAncestorAgentContext } from "./agents-md.js";
-import { isToolDeniedForAgent, switchSessionModelTarget } from "./agent-models.js";
-import type { OpenAgentAgentName } from "./config.js";
-import { formatModelTarget, loadOpenAgentConfig } from "./config.js";
-import { recordContinuousImprovementArtifact } from "./continuous-improvement.js";
-import { formatProjectContext, loadProjectContext } from "./context-loader.js";
-import { advanceFallback, syncFallbackState } from "./model-fallback.js";
+import { loadAncestorAgentContext } from "./agents-md";
+import { isToolDeniedForAgent, switchSessionModelTarget } from "./agent-models";
+import type { OpenAgentAgentName } from "./config";
+import { formatModelTarget, loadOpenAgentConfig } from "./config";
+import { recordContinuousImprovementArtifact } from "./continuous-improvement";
+import { formatProjectContext, loadProjectContext } from "./context-loader";
+import { advanceFallback, syncFallbackState } from "./model-fallback";
 import {
   buildPromptContext,
   expandUltraworkPrompt,
   isUltraworkPrompt,
   looksComplexPrompt,
-} from "./prompt.js";
-import { recordSessionEnd } from "./session-history.js";
-import { loadSkills, matchSkillByTrigger } from "./skill-loader.js";
+} from "./prompt";
+import { recordSessionEnd } from "./session-history";
+import { loadSkills, matchSkillByTrigger } from "./skill-loader";
 import {
   recordToolCall,
   recordToolDenied,
   recordToolFailure,
-} from "./telemetry.js";
-import { isOpenAgentWorkspaceAvailable, writeOpenAgentWorkspaceNote } from "./workspace.js";
+} from "./telemetry";
+import { isOpenAgentWorkspaceAvailable, writeOpenAgentWorkspaceNote } from "./workspace";
 
 type SessionHooks = NonNullable<SessionConfig["hooks"]>;
 type SessionStartHookInput = Parameters<

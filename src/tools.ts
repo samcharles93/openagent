@@ -7,27 +7,27 @@ import {
   registerBackgroundTask,
   updateBackgroundTask,
   type BackgroundTaskStatus,
-} from "./background-tasks.js";
+} from "./background-tasks";
 import {
   bootstrapOpenAgentTask,
   formatOpenAgentBootstrapResult,
   isOpenAgentBootstrapPhase,
   listOpenAgentBootstrapPhases,
-} from "./bootstrap.js";
+} from "./bootstrap";
 import {
   formatBootstrapHistorySummary,
   readBootstrapHistory,
-} from "./bootstrap-history.js";
+} from "./bootstrap-history";
 import {
   applyCategoryOverrides,
   formatCategorySummary,
   getCategoryByName,
   inferCategoryFromObjective,
   listCategoryNames,
-} from "./categories.js";
+} from "./categories";
 import {
   formatOpenAgentCompactionStatus,
-} from "./compaction.js";
+} from "./compaction";
 import {
   formatConfigSummary,
   formatModelTargets,
@@ -35,49 +35,49 @@ import {
   isOpenAgentAgentName,
   loadOpenAgentConfig,
   OPENAGENT_AGENT_NAMES,
-} from "./config.js";
-import { runOpenAgentDoctor } from "./doctor.js";
-import { runOpenAgentAstReplace, runOpenAgentAstSearch } from "./ast-grep.js";
+} from "./config";
+import { runOpenAgentDoctor } from "./doctor";
+import { runOpenAgentAstReplace, runOpenAgentAstSearch } from "./ast-grep";
 import {
   getOpenAgentLspDefinitions,
   getOpenAgentLspDiagnostics,
   getOpenAgentLspReferences,
   runOpenAgentLspRename,
-} from "./lsp-lite.js";
-import { runOpenAgentLookAt } from "./look-at.js";
+} from "./lsp-lite";
+import { runOpenAgentLookAt } from "./look-at";
 import {
   listOpenAgentMemoryTopics,
   readOpenAgentMemory,
   writeOpenAgentMemory,
-} from "./memory.js";
-import { formatFallbackStatus } from "./model-fallback.js";
-import { updateSessionPlan } from "./plan.js";
+} from "./memory";
+import { formatFallbackStatus } from "./model-fallback";
+import { updateSessionPlan } from "./plan";
 import {
   formatOpenAgentPlanReviewResult,
   startPlanReviewWorkflow,
-} from "./plan-review.js";
+} from "./plan-review";
 import {
   formatSessionHistoryEntry,
   readSessionHistory,
   searchSessionHistory,
-} from "./session-history.js";
-import { applyOpenAgentSafeEdit } from "./safe-edit.js";
-import { createTaskTools } from "./task-tools.js";
+} from "./session-history";
+import { applyOpenAgentSafeEdit } from "./safe-edit";
+import { createTaskTools } from "./task-tools";
 import {
   formatOpenAgentTelemetry,
-} from "./telemetry.js";
+} from "./telemetry";
 import {
   formatOpenAgentRoutingStatus,
   isOpenAgentPhase,
   listOpenAgentPhases,
   routeOpenAgentPhase,
   type OpenAgentMode,
-} from "./routing.js";
+} from "./routing";
 import {
   formatOpenAgentWorkspaceRequirement,
   isOpenAgentWorkspaceAvailable,
   writeOpenAgentWorkspaceNote,
-} from "./workspace.js";
+} from "./workspace";
 
 type SessionGetter = () => CopilotSession;
 

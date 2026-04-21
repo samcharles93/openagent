@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import * as path from "node:path";
-import { resolveBundledAstGrepBinary } from "./bundled-deps.js";
+import { resolveBundledAstGrepBinary } from "./bundled-deps";
 
 const DEFAULT_AST_GREP_BINARY = "ast-grep";
 
