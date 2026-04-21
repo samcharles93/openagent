@@ -1,7 +1,33 @@
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { parse, type ParseError } from "jsonc-parser";
+
+// Version for auto-reinitialize: updated whenever source changes so the
+// installed wrapper can detect it needs to reinstall itself on startup.
+const SOURCE_VERSION = "1";
+export function getSourceVersion(): string {
+  return SOURCE_VERSION;
+}
+export function computeSourceFingerprint(): string {
+  try {
+    const srcDir = path.dirname(
+      String(import.meta.resolve("./config.js")).replace("file://", ""),
+    );
+    const marker = path.join(srcDir, "..", "package.json");
+    if (existsSync(marker)) {
+      const pkg = JSON.parse(readFileSync(marker, "utf8"));
+      return createHash("sha256")
+        .update(JSON.stringify({ version: pkg.version, fingerprint: SOURCE_VERSION }))
+        .digest("hex")
+        .slice(0, 16);
+    }
+  } catch {
+    // ignore
+  }
+  return SOURCE_VERSION;
+}
 
 export const OPENAGENT_AGENT_NAMES = [
   "openagent-orchestrator",
