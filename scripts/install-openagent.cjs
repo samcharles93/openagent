@@ -123,7 +123,7 @@ function main() {
   const metadataPath = path.join(installRoot, "install.json");
 
   assertBinary("git");
-  assertBinary("npm");
+  assertBinary("bun");
 
   if (installRoot === path.parse(installRoot).root) {
     throw new Error("Refusing to install OpenAgent at the filesystem root.");
@@ -136,10 +136,10 @@ function main() {
   }
 
   run("git", ["clone", "--depth=1", "--branch", branch, repoUrl, checkoutDir]);
-  run("npm", ["install", "--no-audit", "--no-fund", "--package-lock=false"], {
+  run("bun", ["install"], {
     cwd: checkoutDir,
   });
-  run("npm", ["run", "setup:copilot", "--", "--force"], {
+  run("bun", ["run", "setup:copilot", "--", "--force"], {
     cwd: checkoutDir,
     env: process.env,
   });
@@ -172,7 +172,7 @@ function main() {
       "",
       "Next steps:",
       "1. Use `copilot-oa` for the full SDK extension (commands, tools, hooks, routing).",
-      "   Requires Node.js 24+ and @github/copilot installed via npm.",
+      "   Requires Bun 1.0+ and @github/copilot installed via npm.",
       "2. Or use `copilot --agent openagent-planner` for native custom agents only.",
       "3. Reload VS Code windows to pick up OpenAgent custom agents.",
       "4. Re-run this installer any time you want to refresh the managed checkout.",

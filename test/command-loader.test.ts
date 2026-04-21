@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { getDefaultUserCommandDirectories } from "../.github/extensions/openagent/command-loader.js";
+import { getDefaultUserCommandDirectories } from "../src/command-loader.js";
 
 describe("command-loader", () => {
   it("uses APPDATA and preserves the legacy ~/.config path on Windows", () => {

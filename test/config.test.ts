@@ -6,7 +6,7 @@ import {
   formatModelTargets,
   loadOpenAgentConfig,
   OPENAGENT_AGENT_NAMES,
-} from "../.github/extensions/openagent/config.js";
+} from "../src/config.js";
 
 describe("config", () => {
   describe("isOpenAgentAgentName", () => {

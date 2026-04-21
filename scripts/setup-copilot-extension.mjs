@@ -42,10 +42,8 @@ function main() {
   const repoRoot = path.resolve(path.dirname(scriptPath), "..");
   const sourceEntry = path.join(
     repoRoot,
-    ".github",
-    "extensions",
-    EXTENSION_NAME,
-    "extension.mjs",
+    "src",
+    "extension.mts",
   );
   const { force, targetDir } = parseArgs(process.argv.slice(2));
   const extensionsDir = targetDir ?? getDefaultExtensionsDir();
@@ -56,9 +54,9 @@ function main() {
   if (!existsSync(sourceEntry)) {
     throw new Error(
       [
-        "OpenAgent build output is missing.",
+        "OpenAgent extension entry point is missing.",
         `Expected: ${sourceEntry}`,
-        "Run `npm run build` first, or use `npm run setup:copilot`.",
+        "Run `bun run setup:copilot` to reinstall.",
       ].join("\n") + "\n",
     );
   }

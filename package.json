@@ -7,14 +7,15 @@
   "author": "OpenAgent contributors",
   "license": "MIT",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.0.0",
+    "bun": ">=1.0.0"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "clean": "node -e \"import('node:fs/promises').then((fs) => fs.rm('.github/extensions/openagent', { recursive: true, force: true }))\"",
-    "setup:agents": "node scripts/setup-copilot-agents.mjs",
-    "setup:copilot": "npm run build && node scripts/setup-openagent.mjs",
-    "test": "npm run build && node --experimental-strip-types --test test/*.test.ts",
+    "build": "bun run setup:copilot",
+    "clean": "bun run setup:copilot -- --clean",
+    "setup:agents": "bun run scripts/setup-copilot-agents.mjs",
+    "setup:copilot": "bun run scripts/setup-openagent.mjs",
+    "test": "bun test",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "typecheck:test": "tsc -p test/tsconfig.json"
   },

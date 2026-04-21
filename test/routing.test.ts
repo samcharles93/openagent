@@ -5,7 +5,7 @@ import {
   isOpenAgentPhase,
   listOpenAgentPhases,
   OPENAGENT_PHASES,
-} from "../.github/extensions/openagent/routing.js";
+} from "../src/routing.js";
 
 describe("routing", () => {
   describe("OPENAGENT_PHASES", () => {

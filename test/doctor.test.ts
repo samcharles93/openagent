@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   getBinaryLookupCommand,
   parseBinaryLookupOutput,
-} from "../.github/extensions/openagent/doctor.js";
+} from "../src/doctor.js";
 
 describe("doctor", () => {
   describe("getBinaryLookupCommand", () => {

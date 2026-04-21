@@ -13,7 +13,7 @@ import {
   recordCompactionComplete,
   getOpenAgentTelemetrySnapshot,
   formatOpenAgentTelemetry,
-} from "../.github/extensions/openagent/telemetry.js";
+} from "../src/telemetry.js";
 
 describe("telemetry", () => {
   it("records tool calls and categorizes them", () => {

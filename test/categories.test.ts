@@ -6,7 +6,7 @@ import {
   inferCategoryFromObjective,
   listCategoryNames,
   formatCategorySummary,
-} from "../.github/extensions/openagent/categories.js";
+} from "../src/categories.js";
 
 describe("categories", () => {
   it("lists all 6 built-in categories", () => {

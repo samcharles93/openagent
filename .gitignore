@@ -1,5 +1,4 @@
 node_modules/
-bun.lock
 
 # Local environment and generated session artifacts can contain prompts, paths, or credentials.
 .env
@@ -8,3 +7,6 @@ bun.lock
 files/openagent/
 .copilot/
 openagent-install.json
+
+# Bundled/compiled output - source files are in src/
+.github/extensions/openagent/

@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { inferMimeTypeFromPath } from "../.github/extensions/openagent/look-at.js";
+import { inferMimeTypeFromPath } from "../src/look-at.js";
 
 describe("look-at", () => {
   it("detects PDFs from the file extension", () => {
