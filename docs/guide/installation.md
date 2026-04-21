@@ -17,8 +17,8 @@ curl -fsSL https://raw.githubusercontent.com/samcharles93/openagent/main/scripts
 ## What the installer does
 
 1. Clones `https://github.com/samcharles93/openagent.git` into `~/.copilot/openagent/repo`
-2. Runs `npm install`
-3. Runs `npm run setup:copilot -- --force`
+2. Runs `bun install`
+3. Runs `bun run setup:copilot -- --force`
 4. Installs a user-scoped Copilot extension wrapper at `~/.copilot/extensions/openagent/extension.mjs`
 5. Installs native custom agent profiles at `~/.copilot/agents/*.agent.md`
 6. Installs `copilot-oa` in `%APPDATA%\npm` on Windows or `~/.local/bin` on Unix-like systems
@@ -28,10 +28,10 @@ GitHub Copilot CLI discovers user extensions from `~/.copilot/extensions/<name>/
 ## Requirements
 
 - GitHub Copilot CLI already installed (`npm install -g @github/copilot`)
-- Node.js 24+ for the SDK extension (`copilot-oa` wrapper)
+- Bun 1.0+ for the SDK extension (`copilot-oa` wrapper)
 - Node.js 20+ for native agents only
 - `git`
-- `npm`
+- `bun`
 
 ## After installation
 
@@ -42,7 +42,7 @@ GitHub Copilot CLI discovers user extensions from `~/.copilot/extensions/<name>/
 
 ### SDK extension (full features)
 
-The SDK extension provides `/oa-*` commands, tools, hooks, routing, and workspace persistence. It requires running Copilot CLI via Node.js instead of the native binary:
+The SDK extension provides `/oa-*` commands, tools, hooks, routing, and workspace persistence. It requires Bun 1.0+ and running Copilot CLI via Node.js instead of the native binary:
 
 ```bash
 copilot-oa
@@ -70,4 +70,4 @@ copilot --agent openagent-planner
 
 Run the same command again. The installer recreates the managed checkout and refreshes the Copilot wrapper.
 
-For local development, run `npm run setup:copilot` after moving the checkout or rebuilding the extension. Run `npm run setup:agents` when you only need to refresh native custom agent profiles.
+For local development, run `bun run setup:copilot` after moving the checkout. Run `bun run setup:agents` when you only need to refresh native custom agent profiles.

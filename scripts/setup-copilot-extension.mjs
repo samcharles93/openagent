@@ -92,9 +92,9 @@ function main() {
         "1. Start `copilot` in any repo.",
         "2. Run `/env` or `/statusline` if you want to confirm the extension is loaded.",
         "3. Use `/oa-start <request>` to bootstrap OpenAgent work.",
-        "4. Run `node scripts/setup-copilot-agents.mjs` if native custom agents are missing.",
+        "4. Run `bun run scripts/setup-copilot-agents.mjs` if native custom agents are missing.",
         "",
-        "Use `npm run setup:copilot -- --force` to refresh the wrapper after moving the repo.",
+        "Use `bun run setup:copilot -- --force` to refresh the wrapper after moving the repo.",
       ].join("\n"),
     );
     return;
@@ -119,8 +119,8 @@ function main() {
       "Next steps:",
       "1. Restart `copilot`, or run `/clear` in an existing session to reload extensions.",
       "2. Start work with `/oa-start <request>`.",
-      "3. Run `node scripts/setup-copilot-agents.mjs` if native custom agents are missing.",
-      "4. When you rebuild or move this repo, rerun `npm run setup:copilot`.",
+      "3. Run `bun run scripts/setup-copilot-agents.mjs` if native custom agents are missing.",
+      "4. When you move this repo, rerun `bun run setup:copilot`.",
     ].join("\n") + "\n",
   );
 }

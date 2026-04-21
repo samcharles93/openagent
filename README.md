@@ -37,11 +37,10 @@ curl -fsSL https://raw.githubusercontent.com/samcharles93/openagent/main/scripts
 That command:
 
 1. Clones this repository into `~/.copilot/openagent/repo`
-2. Installs dependencies
-3. Builds the extension
-4. Registers a user-scoped Copilot extension wrapper in `~/.copilot/extensions/openagent`
-5. Installs native custom agent profiles in `~/.copilot/agents`
-6. Installs `copilot-oa` in `%APPDATA%\npm` on Windows or `~/.local/bin` on Unix-like systems
+2. Installs dependencies with Bun
+3. Installs the Copilot extension wrapper
+4. Installs native custom agent profiles in `~/.copilot/agents`
+5. Installs `copilot-oa` in `%APPDATA%\npm` on Windows or `~/.local/bin` on Unix-like systems
 
 ### Using OpenAgent
 
@@ -51,7 +50,7 @@ That command:
 copilot --agent openagent-planner
 ```
 
-**Full SDK extension** (requires the Node wrapper):
+**Full SDK extension** (requires Bun and the Node wrapper):
 
 ```bash
 copilot-oa
@@ -74,19 +73,19 @@ https://raw.githubusercontent.com/samcharles93/openagent/main/docs/guide/install
 For local development from a checked-out repo:
 
 ```bash
-npm install
-npm run setup:copilot
+bun install
+bun run setup:copilot
 ```
 
-This builds the extension, installs the Copilot extension wrapper, installs native agents, and installs the `copilot-oa` wrapper.
+This installs the Copilot extension wrapper, native agents, and the `copilot-oa` wrapper.
 
 ## Notes
 
 - The public installer uses Node, `git`, and `npm`.
-- Node.js 24+ is required for the SDK extension (the `copilot-oa` wrapper).
+- Bun 1.0+ is required for the SDK extension (the `copilot-oa` wrapper).
 - Native custom agents work with Node.js 20+.
 - Set `OPENAGENT_INSTALL_ROOT` to change where the managed checkout is cloned.
 - Set `COPILOT_EXTENSIONS_DIR` if you want Copilot to load user extensions from a non-default directory.
 - Set `COPILOT_AGENTS_DIR` if you want native custom agents written somewhere other than `~/.copilot/agents`.
 - Set `OPENAGENT_BIN_DIR` to change where `copilot-oa` is installed (default: `%APPDATA%\npm` on Windows, `~/.local/bin` elsewhere).
-- Run `npm run setup:agents` to refresh only the native custom agent profiles.
+- Run `bun run setup:agents` to refresh only the native custom agent profiles.

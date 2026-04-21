@@ -93,5 +93,5 @@ Durable notes, routing handoffs, and related artifacts live under `files/openage
 
 ## Validation
 
-- `npm run build`
-- `npm run typecheck`
+- `bun run typecheck`
+- `bun test`
