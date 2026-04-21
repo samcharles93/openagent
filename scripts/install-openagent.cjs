@@ -61,20 +61,31 @@ function parseArgs(argv) {
   return parsed;
 }
 
-function resolveCommand(command) {
-  if (process.platform === "win32" && command === "npm") {
+function resolveCommand(command, platform = process.platform) {
+  if (platform === "win32" && command === "npm") {
     return "npm.cmd";
   }
 
   return command;
 }
 
+function createSpawnOptions(options = {}, platform = process.platform) {
+  return {
+    ...options,
+    shell: platform === "win32",
+  };
+}
+
 function run(command, args, options = {}) {
-  const result = spawnSync(resolveCommand(command), args, {
-    cwd: options.cwd,
-    stdio: "inherit",
-    env: options.env ?? process.env,
-  });
+  const result = spawnSync(
+    resolveCommand(command),
+    args,
+    createSpawnOptions({
+      cwd: options.cwd,
+      stdio: "inherit",
+      env: options.env ?? process.env,
+    }),
+  );
 
   if (result.error) {
     throw new Error(`Failed to launch ${command}: ${result.error.message}`);
@@ -86,12 +97,20 @@ function run(command, args, options = {}) {
 }
 
 function assertBinary(command, versionArgs = ["--version"]) {
-  const result = spawnSync(resolveCommand(command), versionArgs, {
-    stdio: "ignore",
-    env: process.env,
-  });
+  const result = spawnSync(
+    resolveCommand(command),
+    versionArgs,
+    createSpawnOptions({
+      stdio: "ignore",
+      env: process.env,
+    }),
+  );
 
-  if (result.error || result.status !== 0) {
+  if (result.error) {
+    throw new Error(`Failed to launch \`${command}\`: ${result.error.message}`);
+  }
+
+  if (result.status !== 0) {
     throw new Error(
       `OpenAgent installer requires \`${command}\` on PATH. Install it first, then rerun this command.`,
     );
@@ -161,12 +180,14 @@ function main() {
   );
 }
 
-try {
-  main();
-} catch (error) {
-  const message = error instanceof Error ? error.message : String(error);
-  process.stderr.write(`${message}\n`);
-  process.exitCode = 1;
+if (require.main === module) {
+  try {
+    main();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`${message}\n`);
+    process.exitCode = 1;
+  }
 }
 
 module.exports = {
