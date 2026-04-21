@@ -59,7 +59,7 @@ import {
 
 type SessionGetter = () => CopilotSession;
 
-function parseInitDeepArgs(rawArgs: string): {
+export function parseInitDeepArgs(rawArgs: string): {
   force: boolean;
   maxDepth?: number;
 } {
@@ -82,7 +82,7 @@ function parseInitDeepArgs(rawArgs: string): {
   return { force, maxDepth };
 }
 
-function parseRouteCommandArgs(rawArgs: string): {
+export function parseRouteCommandArgs(rawArgs: string): {
   phase: string;
   objective: string;
   handoff: string;
@@ -109,7 +109,7 @@ function parseRouteCommandArgs(rawArgs: string): {
   };
 }
 
-function parseLoopCommandArgs(rawArgs: string): {
+export function parseLoopCommandArgs(rawArgs: string): {
   goal: string;
   maxIterations: number;
 } | null {
@@ -135,7 +135,7 @@ function parseLoopCommandArgs(rawArgs: string): {
   return goal.length > 0 ? { goal, maxIterations } : null;
 }
 
-function parseLookAtCommandArgs(rawArgs: string): {
+export function parseLookAtCommandArgs(rawArgs: string): {
   file: string;
   prompt?: string;
 } | null {
@@ -157,7 +157,7 @@ function parseLookAtCommandArgs(rawArgs: string): {
   };
 }
 
-function parseStartCommandArgs(rawArgs: string): {
+export function parseStartCommandArgs(rawArgs: string): {
   request?: string;
   resumePath?: string;
   resumeNote?: string;

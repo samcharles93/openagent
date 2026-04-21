@@ -12,7 +12,7 @@
   },
   "scripts": {
     "build": "bun run setup:copilot",
-    "clean": "bun run setup:copilot -- --clean",
+    "clean": "rm -rf .github/extensions/openagent/",
     "setup:agents": "bun run scripts/setup-copilot-agents.mjs",
     "setup:copilot": "bun run scripts/setup-openagent.mjs",
     "test": "bun test",
