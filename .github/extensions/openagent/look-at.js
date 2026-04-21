@@ -3,6 +3,58 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import * as path from "node:path";
 import { createBundledCopilotSession } from "./copilot-setup.js";
+const EXTENSION_MIME_TYPES = new Map([
+    [".bmp", "image/bmp"],
+    [".cjs", "text/plain"],
+    [".cmd", "text/plain"],
+    [".css", "text/css"],
+    [".csv", "text/csv"],
+    [".cts", "text/plain"],
+    [".gif", "image/gif"],
+    [".htm", "text/html"],
+    [".html", "text/html"],
+    [".ico", "image/x-icon"],
+    [".ini", "text/plain"],
+    [".jpeg", "image/jpeg"],
+    [".jpg", "image/jpeg"],
+    [".js", "text/plain"],
+    [".json", "application/json"],
+    [".jsx", "text/plain"],
+    [".md", "text/markdown"],
+    [".mjs", "text/plain"],
+    [".mts", "text/plain"],
+    [".pdf", "application/pdf"],
+    [".png", "image/png"],
+    [".ps1", "text/plain"],
+    [".psd1", "text/plain"],
+    [".psm1", "text/plain"],
+    [".scss", "text/plain"],
+    [".sh", "text/plain"],
+    [".svg", "image/svg+xml"],
+    [".tif", "image/tiff"],
+    [".tiff", "image/tiff"],
+    [".toml", "text/plain"],
+    [".ts", "text/plain"],
+    [".tsv", "text/tab-separated-values"],
+    [".tsx", "text/plain"],
+    [".txt", "text/plain"],
+    [".webp", "image/webp"],
+    [".xml", "text/xml"],
+    [".yaml", "text/yaml"],
+    [".yml", "text/yaml"],
+]);
+const BASENAME_MIME_TYPES = new Map([
+    [".editorconfig", "text/plain"],
+    [".env", "text/plain"],
+    [".gitattributes", "text/plain"],
+    [".gitignore", "text/plain"],
+    ["changelog", "text/plain"],
+    ["dockerfile", "text/plain"],
+    ["license", "text/plain"],
+    ["makefile", "text/plain"],
+    ["notice", "text/plain"],
+    ["readme", "text/plain"],
+]);
 function resolveTargetPath(cwd, rawPath) {
     const absolute = path.isAbsolute(rawPath) ? rawPath : path.resolve(cwd, rawPath);
     if (!existsSync(absolute)) {
@@ -25,8 +77,18 @@ function runCommand(name, args) {
     const stdout = result.stdout.trim();
     return stdout.length > 0 ? stdout : null;
 }
+export function inferMimeTypeFromPath(filePath) {
+    const extension = path.extname(filePath).toLowerCase();
+    const extensionMimeType = EXTENSION_MIME_TYPES.get(extension);
+    if (extensionMimeType) {
+        return extensionMimeType;
+    }
+    return BASENAME_MIME_TYPES.get(path.basename(filePath).toLowerCase()) ?? null;
+}
 function detectMimeType(filePath) {
-    return runCommand("file", ["-b", "--mime-type", filePath]) ?? "application/octet-stream";
+    return (inferMimeTypeFromPath(filePath) ??
+        runCommand("file", ["-b", "--mime-type", filePath]) ??
+        "application/octet-stream");
 }
 function truncate(value, maxChars) {
     return value.length <= maxChars ? value : `${value.slice(0, maxChars - 3).trimEnd()}...`;

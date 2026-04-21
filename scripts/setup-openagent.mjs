@@ -6,6 +6,21 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+function getDefaultBinDir(
+  platform = process.platform,
+  env = process.env,
+  homeDir = os.homedir(),
+) {
+  if (platform === "win32") {
+    const appData = env.APPDATA?.trim();
+    return appData
+      ? path.join(appData, "npm")
+      : path.join(homeDir, "AppData", "Roaming", "npm");
+  }
+
+  return path.join(homeDir, ".local", "bin");
+}
+
 function runNode(scriptPath, args) {
   const result = spawnSync(process.execPath, [scriptPath, ...args], {
     stdio: "inherit",
@@ -31,10 +46,7 @@ function installNodeWrapper(scriptsDir) {
     return;
   }
 
-  const binDir = process.env.OPENAGENT_BIN_DIR?.trim()
-    || (isWindows
-      ? path.join(os.homedir(), ".local", "bin")
-      : path.join(os.homedir(), ".local", "bin"));
+  const binDir = process.env.OPENAGENT_BIN_DIR?.trim() || getDefaultBinDir();
   mkdirSync(binDir, { recursive: true });
 
   if (isWindows) {

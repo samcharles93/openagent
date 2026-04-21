@@ -2,8 +2,16 @@
 
 Install OpenAgent for GitHub Copilot CLI and VS Code Copilot with this one-command bootstrap:
 
+**macOS / Linux**
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/samcharles93/openagent/main/scripts/install-openagent.cjs | node
+```
+
+**Windows PowerShell**
+
+```powershell
+(Invoke-WebRequest "https://raw.githubusercontent.com/samcharles93/openagent/main/scripts/install-openagent.cjs").Content | node
 ```
 
 ## What the installer does
@@ -13,7 +21,7 @@ curl -fsSL https://raw.githubusercontent.com/samcharles93/openagent/main/scripts
 3. Runs `npm run setup:copilot -- --force`
 4. Installs a user-scoped Copilot extension wrapper at `~/.copilot/extensions/openagent/extension.mjs`
 5. Installs native custom agent profiles at `~/.copilot/agents/*.agent.md`
-6. Installs `copilot-oa` wrapper at `~/.local/bin/copilot-oa`
+6. Installs `copilot-oa` in `%APPDATA%\npm` on Windows or `~/.local/bin` on Unix-like systems
 
 GitHub Copilot CLI discovers user extensions from `~/.copilot/extensions/<name>/extension.mjs`, so the installer configures that directory before any `/oa-*` command is available. Copilot CLI and VS Code discover native custom agents from `~/.copilot/agents`, and this repository also ships workspace-level profiles under `.github/agents`.
 
@@ -56,7 +64,7 @@ copilot --agent openagent-planner
 - `OPENAGENT_INSTALL_ROOT=/custom/path` changes where the managed repo checkout lives
 - `COPILOT_EXTENSIONS_DIR=/custom/extensions` changes where the user-scoped extension wrapper is written
 - `COPILOT_AGENTS_DIR=/custom/agents` changes where native custom agent profiles are written
-- `OPENAGENT_BIN_DIR=/custom/bin` changes where `copilot-oa` is installed (default: `~/.local/bin`)
+- `OPENAGENT_BIN_DIR=/custom/bin` changes where `copilot-oa` is installed (default: `%APPDATA%\npm` on Windows, `~/.local/bin` elsewhere)
 
 ## Refreshing the install
 

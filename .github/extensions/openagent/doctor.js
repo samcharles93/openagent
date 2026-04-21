@@ -4,12 +4,28 @@ import { formatConfigSummary } from "./config.js";
 import { recordContinuousImprovementArtifact } from "./continuous-improvement.js";
 import { formatOpenAgentRoutingStatus, } from "./routing.js";
 import { isOpenAgentWorkspaceAvailable, writeOpenAgentWorkspaceNote, } from "./workspace.js";
+export function getBinaryLookupCommand(platform = process.platform) {
+    return platform === "win32" ? "where.exe" : "which";
+}
+export function parseBinaryLookupOutput(stdout) {
+    return (stdout
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .find((line) => line.length > 0) ?? null);
+}
 function checkBinary(name) {
-    const result = spawnSync("which", [name], { encoding: "utf8" });
-    const resolvedPath = result.status === 0 ? result.stdout.trim() : "";
+    const result = spawnSync(getBinaryLookupCommand(), [name], { encoding: "utf8" });
+    if (result.error) {
+        const code = result.error.code;
+        if (code === "ENOENT") {
+            return { name, path: null };
+        }
+        throw result.error;
+    }
+    const resolvedPath = result.status === 0 ? parseBinaryLookupOutput(result.stdout) : null;
     return {
         name,
-        path: resolvedPath.length > 0 ? resolvedPath : null,
+        path: resolvedPath,
     };
 }
 function formatBinaryLine(check) {

@@ -60,10 +60,50 @@ function scanCommandDirectory(dir: string): string[] {
   }
 }
 
+function pushUniquePath(output: string[], value: string): void {
+  const resolved = path.resolve(value);
+  if (!output.includes(resolved)) {
+    output.push(resolved);
+  }
+}
+
+export function getDefaultUserCommandDirectories(args?: {
+  platform?: NodeJS.Platform;
+  env?: NodeJS.ProcessEnv;
+  homedir?: string;
+}): string[] {
+  const platform = args?.platform ?? process.platform;
+  const env = args?.env ?? process.env;
+  const homedir = args?.homedir ?? os.homedir();
+  const directories: string[] = [];
+
+  if (platform === "win32") {
+    const appData = env.APPDATA?.trim() || path.join(homedir, "AppData", "Roaming");
+    pushUniquePath(directories, path.join(appData, "openagent", "commands"));
+    pushUniquePath(directories, path.join(homedir, ".config", "openagent", "commands"));
+    return directories;
+  }
+
+  if (platform === "darwin") {
+    pushUniquePath(
+      directories,
+      path.join(homedir, "Library", "Application Support", "openagent", "commands"),
+    );
+  }
+
+  const xdgConfigHome = env.XDG_CONFIG_HOME?.trim()
+    ? path.resolve(env.XDG_CONFIG_HOME.trim())
+    : path.join(homedir, ".config");
+  pushUniquePath(directories, path.join(xdgConfigHome, "openagent", "commands"));
+  return directories;
+}
+
 export function discoverCommandFiles(cwd: string): string[] {
   const projectDir = path.join(cwd, ".openagent", "commands");
-  const userDir = path.join(os.homedir(), ".config", "openagent", "commands");
-  return [...scanCommandDirectory(projectDir), ...scanCommandDirectory(userDir)];
+  return [
+    ...scanCommandDirectory(projectDir),
+    ...getDefaultUserCommandDirectories().flatMap((dir) => scanCommandDirectory(dir)),
+  ];
 }
 
 export function loadCustomCommands(cwd: string): OpenAgentCustomCommand[] {

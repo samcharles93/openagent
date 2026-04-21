@@ -22,8 +22,16 @@ Native agents work with the standard `copilot` binary. The SDK extension require
 
 ### For humans
 
+**macOS / Linux**
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/samcharles93/openagent/main/scripts/install-openagent.cjs | node
+```
+
+**Windows PowerShell**
+
+```powershell
+(Invoke-WebRequest "https://raw.githubusercontent.com/samcharles93/openagent/main/scripts/install-openagent.cjs").Content | node
 ```
 
 That command:
@@ -33,7 +41,7 @@ That command:
 3. Builds the extension
 4. Registers a user-scoped Copilot extension wrapper in `~/.copilot/extensions/openagent`
 5. Installs native custom agent profiles in `~/.copilot/agents`
-6. Installs `copilot-oa` wrapper at `~/.local/bin/copilot-oa`
+6. Installs `copilot-oa` in `%APPDATA%\npm` on Windows or `~/.local/bin` on Unix-like systems
 
 ### Using OpenAgent
 
@@ -80,5 +88,5 @@ This builds the extension, installs the Copilot extension wrapper, installs nati
 - Set `OPENAGENT_INSTALL_ROOT` to change where the managed checkout is cloned.
 - Set `COPILOT_EXTENSIONS_DIR` if you want Copilot to load user extensions from a non-default directory.
 - Set `COPILOT_AGENTS_DIR` if you want native custom agents written somewhere other than `~/.copilot/agents`.
-- Set `OPENAGENT_BIN_DIR` to change where `copilot-oa` is installed (default: `~/.local/bin`).
+- Set `OPENAGENT_BIN_DIR` to change where `copilot-oa` is installed (default: `%APPDATA%\npm` on Windows, `~/.local/bin` elsewhere).
 - Run `npm run setup:agents` to refresh only the native custom agent profiles.

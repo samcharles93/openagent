@@ -17,9 +17,19 @@ export function resolveBundledAstGrepBinary() {
         return null;
     }
     const packageRoot = path.dirname(packageJsonPath);
-    const directCandidates = [path.join(packageRoot, "ast-grep"), path.join(packageRoot, "sg")];
+    const directCandidates = process.platform === "win32"
+        ? [
+            path.join(packageRoot, "ast-grep.exe"),
+            path.join(packageRoot, "sg.exe"),
+            path.join(packageRoot, "ast-grep"),
+            path.join(packageRoot, "sg"),
+        ]
+        : [path.join(packageRoot, "ast-grep"), path.join(packageRoot, "sg")];
     const directBinary = directCandidates.find((candidate) => existsSync(candidate)) ?? null;
     if (directBinary) {
+        if (path.extname(directBinary).toLowerCase() === ".exe") {
+            return directBinary;
+        }
         try {
             const shimPreview = readFileSync(directBinary, "utf8");
             if (!shimPreview.includes("shim file was executed")) {

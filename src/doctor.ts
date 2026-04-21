@@ -27,12 +27,36 @@ export type OpenAgentDoctorResult = {
   improvementMemoryPath: string;
 };
 
+export function getBinaryLookupCommand(
+  platform: NodeJS.Platform = process.platform,
+): string {
+  return platform === "win32" ? "where.exe" : "which";
+}
+
+export function parseBinaryLookupOutput(stdout: string): string | null {
+  return (
+    stdout
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .find((line) => line.length > 0) ?? null
+  );
+}
+
 function checkBinary(name: string): BinaryCheck {
-  const result = spawnSync("which", [name], { encoding: "utf8" });
-  const resolvedPath = result.status === 0 ? result.stdout.trim() : "";
+  const result = spawnSync(getBinaryLookupCommand(), [name], { encoding: "utf8" });
+  if (result.error) {
+    const code = (result.error as NodeJS.ErrnoException).code;
+    if (code === "ENOENT") {
+      return { name, path: null };
+    }
+    throw result.error;
+  }
+
+  const resolvedPath =
+    result.status === 0 ? parseBinaryLookupOutput(result.stdout) : null;
   return {
     name,
-    path: resolvedPath.length > 0 ? resolvedPath : null,
+    path: resolvedPath,
   };
 }
 
