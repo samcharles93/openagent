@@ -10,15 +10,29 @@ $ErrorActionPreference = 'Stop'
 
 $CopilotJS = $null
 
-$NpmRoot = $null
-try {
-    $NpmRoot = (npm root -g 2>$null)
-} catch {}
-
-if ($NpmRoot -and (Test-Path (Join-Path $NpmRoot '@github/copilot/index.js'))) {
-    $CopilotJS = Join-Path $NpmRoot '@github/copilot/index.js'
+# 1. %USERPROFILE%\.copilot\pkg\win-x64\<version>\index.js — native binary's own JS,
+#    always in sync with whatever version `copilot update` installed.
+$PkgBase = Join-Path $env:USERPROFILE '.copilot\pkg\win-x64'
+if (Test-Path $PkgBase) {
+    $Latest = Get-ChildItem -Directory $PkgBase |
+        Sort-Object { [version]($_.Name -replace '[^0-9.]', '') } |
+        Select-Object -Last 1
+    if ($Latest) {
+        $Candidate = Join-Path $Latest.FullName 'index.js'
+        if (Test-Path $Candidate) { $CopilotJS = $Candidate }
+    }
 }
 
+# 2. npm global root
+if (-not $CopilotJS) {
+    $NpmRoot = $null
+    try { $NpmRoot = (npm root -g 2>$null) } catch {}
+    if ($NpmRoot -and (Test-Path (Join-Path $NpmRoot '@github/copilot/index.js'))) {
+        $CopilotJS = Join-Path $NpmRoot '@github/copilot/index.js'
+    }
+}
+
+# 3. Common npm global install locations
 if (-not $CopilotJS) {
     $Candidates = @(
         (Join-Path $env:APPDATA 'npm/node_modules/@github/copilot/index.js'),
@@ -33,7 +47,7 @@ if (-not $CopilotJS) {
 }
 
 if (-not $CopilotJS) {
-    Write-Error "Could not find @github/copilot npm package. Install it with: npm install -g @github/copilot"
+    Write-Error "Could not find Copilot CLI JS entry point. Run copilot once to populate ~/.copilot/pkg/, or install via: npm install -g @github/copilot"
     exit 1
 }
 

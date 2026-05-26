@@ -54,49 +54,56 @@ const NO_EDIT_AGENT_DENIED_TOOLS = [
 ] as const;
 
 const DEFAULT_AGENT_MODEL_CONFIGS: Record<OpenAgentAgentName, OpenAgentAgentModelConfig> = {
-  "openagent-orchestrator": {
+  "conductor": {
     reasoningEffort: "high",
     fallbackModels: [{ model: "claude-sonnet-4" }, { model: "gpt-4.1" }],
   },
-  "openagent-planner": {
+  "architect": {
     reasoningEffort: "high",
     deniedTools: ["bash", "powershell", "shell", "edit", "create", "write", "apply_patch"],
     fallbackModels: [{ model: "claude-sonnet-4" }, { model: "gpt-4.1" }],
   },
-  "openagent-critic": {
+  "skeptic": {
     preferredModel: "claude-sonnet-4",
     reasoningEffort: "high",
     deniedTools: [...READ_ONLY_AGENT_DENIED_TOOLS],
     fallbackModels: [{ model: "gpt-5.4", reasoningEffort: "high" }, { model: "gpt-4.1" }],
   },
-  "openagent-explorer": {
+  "scout": {
     preferredModel: "gpt-5.4-mini",
     reasoningEffort: "low",
     deniedTools: [...READ_ONLY_AGENT_DENIED_TOOLS],
     fallbackModels: [{ model: "claude-sonnet-4" }, { model: "gpt-4.1" }],
   },
-  "openagent-implementer": {
+  "builder": {
     reasoningEffort: "medium",
+    deniedTools: [
+      "openagent_task_update",
+      "openagent_route_phase",
+      "openagent_delegate",
+      "openagent_bootstrap_task",
+      "openagent_plan_review",
+    ],
     fallbackModels: [{ model: "gpt-4.1" }, { model: "claude-sonnet-4" }],
   },
-  "openagent-reviewer": {
+  "auditor": {
     reasoningEffort: "high",
-    deniedTools: ["edit", "create", "write", "apply_patch", "bash", "powershell", "shell"],
+    deniedTools: ["edit", "create", "write", "apply_patch"],
     fallbackModels: [{ model: "claude-sonnet-4" }, { model: "gpt-4.1" }],
   },
-  "openagent-oracle": {
+  "oracle": {
     preferredModel: "gpt-5.4",
     reasoningEffort: "high",
     deniedTools: [...READ_ONLY_AGENT_DENIED_TOOLS],
     fallbackModels: [{ model: "claude-sonnet-4" }, { model: "gpt-4.1" }],
   },
-  "openagent-qa": {
+  "tester": {
     preferredModel: "claude-sonnet-4",
     reasoningEffort: "medium",
     deniedTools: [...NO_EDIT_AGENT_DENIED_TOOLS],
     fallbackModels: [{ model: "gpt-5.4", reasoningEffort: "medium" }, { model: "gpt-4.1" }],
   },
-  "openagent-researcher": {
+  "sleuth": {
     reasoningEffort: "medium",
     deniedTools: ["edit", "create", "write", "apply_patch"],
     fallbackModels: [{ model: "gpt-4.1" }, { model: "claude-sonnet-4" }],

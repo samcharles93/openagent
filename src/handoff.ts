@@ -150,7 +150,7 @@ export async function writeOpenAgentHandoffArtifact(args: {
   const fromAgent = (args.fromAgent ??
     routeState?.currentAgent ??
     agentResult.agent?.name ??
-    "openagent-orchestrator") as OpenAgentAgentName;
+    "conductor") as OpenAgentAgentName;
   const fromPhase = args.fromPhase ?? routeState?.currentPhase ?? inferOpenAgentPhase(fromAgent);
   const fromMode = (args.fromMode ?? routeState?.currentMode ?? modeResult.mode ?? "interactive") as OpenAgentMode;
   const latestHandoffPath = args.latestHandoffPath ?? routeState?.latestHandoffPath ?? null;

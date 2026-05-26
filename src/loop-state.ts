@@ -31,7 +31,8 @@ export function buildOpenAgentLoopPrompt(args: {
     `Continue working on this goal until it is actually complete: ${args.goal}`,
     "",
     `This is continuation iteration ${args.iterations + 1} of ${args.maxIterations}.`,
-    `When the goal is fully complete, include the exact sentinel ${OPENAGENT_LOOP_DONE_SENTINEL} in your final response.`,
+    "When you believe the goal is complete, verify your work: read every changed file, run the project's build and test commands, and confirm the output matches expectations.",
+    `Only after verification passes, include the exact sentinel ${OPENAGENT_LOOP_DONE_SENTINEL} in your final response. The orchestrator will perform a final review before accepting completion.`,
     "If the goal is not complete yet, keep making progress and leave the session in a state where the next continuation can pick up cleanly.",
     "Use the current session plan, routing state, and workspace notes as the durable source of truth.",
   ].join("\n");

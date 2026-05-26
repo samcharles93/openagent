@@ -30,15 +30,15 @@ export function computeSourceFingerprint(): string {
 }
 
 export const OPENAGENT_AGENT_NAMES = [
-  "openagent-orchestrator",
-  "openagent-planner",
-  "openagent-critic",
-  "openagent-researcher",
-  "openagent-explorer",
-  "openagent-implementer",
-  "openagent-reviewer",
-  "openagent-oracle",
-  "openagent-qa",
+  "conductor",
+  "architect",
+  "skeptic",
+  "sleuth",
+  "scout",
+  "builder",
+  "auditor",
+  "oracle",
+  "tester",
 ] as const;
 
 export type OpenAgentAgentName = (typeof OPENAGENT_AGENT_NAMES)[number];
@@ -131,7 +131,7 @@ type RawOpenAgentConfig = {
 
 const DEFAULT_CONFIG: OpenAgentConfig = {
   autoSelectAgent: true,
-  defaultAgent: "openagent-orchestrator",
+  defaultAgent: "conductor",
   systemDirectives: [
     "Plan before heavy implementation work.",
     "Prefer precise, tool-backed reasoning over speculation.",

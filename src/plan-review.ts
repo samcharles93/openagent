@@ -49,18 +49,18 @@ function buildPlanReviewWorkflowNote(args: {
     args.request.trim(),
     "",
     "## Required sequence",
-    "1. OpenAgent Planner drafts or refines the implementation plan.",
-    "2. OpenAgent Critic challenges the plan for ambiguity, missing dependencies, hidden risks, and weak verification.",
-    "3. The plan is revised until the critical objections are resolved explicitly.",
-    "4. OpenAgent Reviewer validates that the revised plan satisfies the request and is ready for implementation.",
-    "5. Only after those review gates pass does OpenAgent route to the Implementer.",
+    "1. Orchestrator routes to Architect to draft or refine the implementation plan.",
+    "2. Planner returns the plan to the orchestrator. Orchestrator decides whether critique is needed.",
+    "3. If needed, orchestrator routes to Skeptic. The critic reviews the plan and returns a verdict to the orchestrator.",
+    "4. The critic is a dead-end — it does NOT route to the implementer. Only the orchestrator decides next steps.",
+    "5. Orchestrator may route back to planner for revisions, or proceed to implementation when the plan is sound.",
     "",
     "## Specialist handoff guidance",
     toBullets([
-      'Use openagent_route_phase with phase "planner" and agent "openagent-critic" when switching from drafting to critique.',
-      'Use openagent_route_phase with phase "reviewer" and agent "openagent-reviewer" when the plan is ready for final pre-implementation review.',
-      'Use openagent_route_phase with phase "implementer" only after the critic and reviewer concerns are resolved.',
-      'Use openagent_route_phase with agent "openagent-oracle" for a harder read-only architecture consult, or agent "openagent-qa" later when implementation exists and needs hands-on verification.',
+      'Route to phase "planner" for plan creation. The planner returns to the orchestrator when done.',
+      'Route to phase "planner" with agent "skeptic" for plan review. The critic returns a verdict to the orchestrator — it never routes onward.',
+      'Route to phase "implementer" only after the orchestrator is satisfied the plan is executable.',
+      'Use agent "oracle" for read-only architecture review, or agent "tester" when implementation exists and needs hands-on verification.',
     ]),
   ].join("\n");
 }
@@ -83,9 +83,9 @@ function buildPlanReviewHandoff(args: {
     toBullets([
       "Read the workflow note before writing or revising the plan.",
       "Draft a concrete implementation plan with explicit sequencing, boundaries, and validation.",
-      'When the plan is actionable, route to phase "planner" with agent "openagent-critic" for a deliberate critique pass.',
-      'After resolving critique findings, route to phase "reviewer" with agent "openagent-reviewer" for a final pre-implementation gate.',
-      'Do not route to the implementer until both critique passes are addressed explicitly.',
+      "When the plan is actionable, return to the orchestrator with the plan summary.",
+      "The orchestrator will decide whether to send the plan to the critic or proceed to implementation.",
+      "The critic is a dead-end — it returns a verdict to the orchestrator. Only the orchestrator routes to the implementer.",
     ]),
   ].join("\n");
 }
@@ -138,7 +138,7 @@ export async function startPlanReviewWorkflow(args: {
     config: args.config,
     request: {
       phase: "planner",
-      agent: "openagent-planner",
+      agent: "architect",
       objective: `Draft and pressure-test an implementation plan: ${requestSummary}`,
       handoff: buildPlanReviewHandoff({
         request,

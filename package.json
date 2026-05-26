@@ -12,6 +12,7 @@
   },
   "scripts": {
     "build": "bun run setup:copilot",
+    "bundle": "bun build src/extension.mts --outfile dist/extension.mjs --target node --format esm --external @github/copilot-sdk --external @github/copilot-sdk/extension --external typescript --external jsonc-parser",
     "clean": "rm -rf .github/extensions/openagent/",
     "setup:agents": "bun run scripts/setup-copilot-agents.mjs",
     "setup:copilot": "bun run scripts/setup-openagent.mjs",

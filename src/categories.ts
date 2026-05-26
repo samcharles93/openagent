@@ -45,7 +45,7 @@ export const DEFAULT_CATEGORIES: OpenAgentCategory[] = [
     preferredModel: "gpt-4.1",
     fallbackModels: [{ model: "claude-sonnet-4" }],
     reasoningEffort: "low",
-    suggestedPhase: "implementer",
+    suggestedPhase: "orchestrator",
   },
   {
     name: "research",
@@ -81,7 +81,7 @@ export const DEFAULT_CATEGORIES: OpenAgentCategory[] = [
     preferredModel: "gpt-4.1",
     fallbackModels: [{ model: "claude-sonnet-4" }],
     reasoningEffort: "medium",
-    suggestedPhase: "implementer",
+    suggestedPhase: "orchestrator",
   },
 ];
 

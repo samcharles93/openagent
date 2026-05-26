@@ -81,32 +81,32 @@ export type OpenAgentRouteResult = {
 
 const PHASE_DEFINITIONS: Record<OpenAgentPhase, PhaseDefinition> = {
   orchestrator: {
-    agent: "openagent-orchestrator",
-    agents: ["openagent-orchestrator"],
+    agent: "conductor",
+    agents: ["conductor"],
     mode: "interactive",
     description: "Coordinate the full task, choose the next phase, and keep the overall plan coherent.",
   },
   planner: {
-    agent: "openagent-planner",
-    agents: ["openagent-planner", "openagent-critic"],
+    agent: "architect",
+    agents: ["architect", "skeptic"],
     mode: "plan",
     description: "Clarify scope, sequence the work, and produce an implementation-ready plan.",
   },
   researcher: {
-    agent: "openagent-researcher",
-    agents: ["openagent-researcher", "openagent-explorer"],
+    agent: "sleuth",
+    agents: ["sleuth", "scout"],
     mode: "interactive",
     description: "Investigate unfamiliar code or APIs and return grounded findings.",
   },
   implementer: {
-    agent: "openagent-implementer",
-    agents: ["openagent-implementer"],
+    agent: "builder",
+    agents: ["builder"],
     mode: "autopilot",
     description: "Execute the planned change and carry the implementation through to completion.",
   },
   reviewer: {
-    agent: "openagent-reviewer",
-    agents: ["openagent-reviewer", "openagent-oracle", "openagent-qa"],
+    agent: "auditor",
+    agents: ["auditor", "oracle", "tester"],
     mode: "interactive",
     description: "Review the work for correctness, regressions, and missing follow-through.",
   },
@@ -140,17 +140,17 @@ export function inferOpenAgentPhase(rawAgentName: string | null | undefined): Op
   const agentName = inferAgentName(rawAgentName);
 
   switch (agentName) {
-    case "openagent-planner":
-    case "openagent-critic":
+    case "architect":
+    case "skeptic":
       return "planner";
-    case "openagent-researcher":
-    case "openagent-explorer":
+    case "sleuth":
+    case "scout":
       return "researcher";
-    case "openagent-implementer":
+    case "builder":
       return "implementer";
-    case "openagent-reviewer":
-    case "openagent-oracle":
-    case "openagent-qa":
+    case "auditor":
+    case "oracle":
+    case "tester":
       return "reviewer";
     default:
       return "orchestrator";
@@ -325,6 +325,13 @@ export async function routeOpenAgentPhase(args: {
   request: OpenAgentRouteRequest;
 }): Promise<OpenAgentRouteResult> {
   const { session, config, request } = args;
+
+  if (request.phase === "implementer") {
+    throw new Error(
+      "Direct routing to the implementer phase is not supported. Use the `openagent_fleet` tool to register implementation tasks, then dispatch builders via the `agent` tool. This keeps the conductor in orchestrator phase while builders run in parallel.",
+    );
+  }
+
   requireOpenAgentWorkspacePath(session, "OpenAgent routing");
   const timestamp = new Date().toISOString();
   const existingState = await readOpenAgentRouteState({ session, config });

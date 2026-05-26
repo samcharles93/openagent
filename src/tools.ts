@@ -67,6 +67,12 @@ import {
   formatOpenAgentTelemetry,
 } from "./telemetry";
 import {
+  clearFleetState,
+  formatFleetDispatchInstructions,
+  writeFleetState,
+  type FleetTask,
+} from "./fleet";
+import {
   formatOpenAgentRoutingStatus,
   isOpenAgentPhase,
   listOpenAgentPhases,
@@ -95,7 +101,7 @@ type WorkspaceNoteArgs = {
 type BootstrapTaskArgs = {
   request: string;
   requestedBy?: string;
-  phase?: "auto" | "planner" | "researcher" | "implementer";
+  phase?: "auto" | "planner" | "researcher" | "orchestrator";
   syncPlan?: boolean;
   mode?: OpenAgentMode | "default";
 };
@@ -115,6 +121,11 @@ type PlanReviewArgs = {
   requestedBy?: string;
   syncPlan?: boolean;
   mode?: OpenAgentMode | "default";
+};
+
+type FleetArgs = {
+  objective: string;
+  tasks: Array<{ title: string; description: string; scope?: string }>;
 };
 
 type MemoryWriteArgs = {
@@ -324,6 +335,42 @@ function parsePlanReviewArgs(args: unknown): PlanReviewArgs {
     syncPlan: args.syncPlan === false ? false : true,
     mode,
   };
+}
+
+function parseFleetArgs(args: unknown): FleetArgs {
+  if (
+    !isRecord(args) ||
+    typeof args.objective !== "string" ||
+    args.objective.trim().length === 0 ||
+    !Array.isArray(args.tasks) ||
+    args.tasks.length === 0
+  ) {
+    throw new Error(
+      "openagent_fleet requires a non-empty objective string and a non-empty tasks array.",
+    );
+  }
+
+  const tasks: FleetArgs["tasks"] = [];
+  for (const [i, raw] of args.tasks.entries()) {
+    if (
+      !isRecord(raw) ||
+      typeof raw.title !== "string" ||
+      raw.title.trim().length === 0 ||
+      typeof raw.description !== "string" ||
+      raw.description.trim().length === 0
+    ) {
+      throw new Error(
+        `openagent_fleet tasks[${i}] must have non-empty title and description strings.`,
+      );
+    }
+    tasks.push({
+      title: raw.title.trim(),
+      description: raw.description.trim(),
+      scope: typeof raw.scope === "string" ? raw.scope.trim() : undefined,
+    });
+  }
+
+  return { objective: args.objective.trim(), tasks };
 }
 
 function parseMemoryWriteArgs(args: unknown): MemoryWriteArgs {
@@ -590,7 +637,7 @@ export function createTools(args: {
         },
         phase: {
           type: "string",
-          enum: ["auto", "planner", "researcher", "implementer"],
+          enum: ["auto", "planner", "researcher", "orchestrator"],
           description:
             "Optional override for the starting phase. Defaults to auto classification.",
         },
@@ -734,14 +781,14 @@ export function createTools(args: {
       properties: {
         phase: {
           type: "string",
-          enum: ["orchestrator", "planner", "researcher", "implementer", "reviewer"],
-          description: "The target OpenAgent phase.",
+          enum: ["orchestrator", "planner", "researcher", "reviewer"],
+          description: "The target OpenAgent phase. Use `openagent_fleet` for implementation dispatch — routing directly to `implementer` is not supported.",
         },
         agent: {
           type: "string",
           enum: [...OPENAGENT_AGENT_NAMES],
           description:
-            "Optional agent override inside the target phase (for example openagent-critic or openagent-oracle).",
+            "Optional agent override inside the target phase (for example skeptic or oracle).",
         },
         objective: {
           type: "string",
@@ -772,6 +819,13 @@ export function createTools(args: {
       if (!isOpenAgentPhase(parsedArgs.phase)) {
         throw new Error(
           `Unknown OpenAgent phase "${parsedArgs.phase}". Available phases: ${listOpenAgentPhases()}.`,
+        );
+      }
+
+      if (parsedArgs.phase === "implementer") {
+        return createFailureResult(
+          "Direct routing to the implementer phase is not supported. Use `openagent_fleet` to register implementation tasks and dispatch builders via the `agent` tool. This keeps the conductor in orchestrator phase while builders run.",
+          "implementer routing disabled — use openagent_fleet",
         );
       }
 
@@ -806,6 +860,83 @@ export function createTools(args: {
         ].join("\n"),
         `OpenAgent routed to the ${result.phase} phase.`,
       );
+    },
+  };
+
+  const fleetTool: Tool = {
+    name: "openagent_fleet",
+    description:
+      "Register an implementation wave and get ready-to-dispatch agent payloads. Call the `agent` tool for each returned task in a single response to dispatch builders in parallel. For sequential waves, call `openagent_fleet` again after the previous wave completes.",
+    parameters: {
+      type: "object",
+      properties: {
+        objective: {
+          type: "string",
+          description: "The overall implementation objective for this wave.",
+        },
+        tasks: {
+          type: "array",
+          description:
+            "Implementation tasks for this wave. Tasks within a wave run in parallel — only group tasks here if their file scopes do not overlap.",
+          items: {
+            type: "object",
+            properties: {
+              title: {
+                type: "string",
+                description: "Short imperative title (e.g. 'Rename cmd/aim to cmd/tau').",
+              },
+              description: {
+                type: "string",
+                description: "Full task objective and what done looks like.",
+              },
+              scope: {
+                type: "string",
+                description:
+                  "Files or packages this task modifies (e.g. 'cmd/aim/, go.mod'). Must not overlap with other tasks in the same wave.",
+              },
+            },
+            required: ["title", "description"],
+          },
+          minItems: 1,
+        },
+      },
+      required: ["objective", "tasks"],
+    },
+    handler: async (args) => {
+      const session = getSession();
+      if (!isOpenAgentWorkspaceAvailable(session)) {
+        const message = formatOpenAgentWorkspaceRequirement("openagent_fleet");
+        return createFailureResult(message, message);
+      }
+
+      const parsedArgs = parseFleetArgs(args);
+      const resolution = loadOpenAgentConfig(resolveCwd(initialCwd));
+      const existing = await import("./fleet").then((m) =>
+        m.readFleetState({ session, config: resolution.config }),
+      );
+      const wave = existing ? existing.wave + 1 : 1;
+      const id = `fleet-${new Date().toISOString().replace(/[:.]/g, "-")}`;
+
+      const tasks: FleetTask[] = parsedArgs.tasks.map((t, i) => ({
+        id: `${id}-task-${i + 1}`,
+        title: t.title,
+        description: t.description,
+        scope: t.scope,
+      }));
+
+      const state = {
+        id,
+        objective: parsedArgs.objective,
+        wave,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        tasks,
+      };
+
+      await writeFleetState({ session, config: resolution.config, state });
+
+      const instructions = formatFleetDispatchInstructions(state);
+      return createSuccessResult(instructions, `Fleet ${id} registered with ${tasks.length} task(s).`);
     },
   };
 
@@ -1951,6 +2082,7 @@ export function createTools(args: {
     planNoteTool,
     workspaceNoteTool,
     routePhaseTool,
+    fleetTool,
     planReviewTool,
     doctorTool,
     memoryWriteTool,

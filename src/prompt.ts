@@ -24,8 +24,9 @@ export function buildSystemPrompt(config: OpenAgentConfig): string {
     `Use openagent_workspace_note to persist reusable notes and artifacts under files/${config.workspace.notesDirectory}/.`,
     "Use openagent_memory_write/openagent_memory_read/openagent_memory_list to persist durable repo-scoped memories across sessions when conventions or follow-up notes should survive.",
     "Promote stable repo-wide lessons into `.openagent/rules/*.md`, and move early runtime-facing guidance into `AGENTS.md` when future sessions should see it immediately.",
-    "Use openagent_route_phase when you intentionally move work between planner, researcher, implementer, reviewer, or orchestrator phases, including specialist agent variants inside those phases.",
-    "Use the OpenAgent custom agents when a planner, critic, explorer, implementer, reviewer, oracle, QA, or researcher mindset would improve the result.",
+    "Use openagent_route_phase when you intentionally move work between planner, researcher, reviewer, or orchestrator phases, including specialist agent variants inside those phases.",
+    "Use openagent_fleet to register implementation tasks and get ready-to-dispatch agent payloads — then call the `agent` tool for each task in one response to dispatch builders in parallel.",
+    "Use the OpenAgent custom agents when a conductor, architect, skeptic, scout, sleuth, builder, auditor, oracle, or tester mindset would improve the result.",
   ];
 
   return [
@@ -53,8 +54,8 @@ export function buildPromptContext(
       : "If the task expands beyond a quick change, use openagent_bootstrap_task or /oa-start before proceeding so the plan and route stay explicit.",
     `Persist durable notes in files/${resolution.config.workspace.notesDirectory}/ when they will help future turns.`,
     "Use repo memory for recurring repo-specific notes, and promote stable repeated lessons into `.openagent/rules/` or `AGENTS.md` instead of leaving them in one-off outputs.",
-    "When changing phases, use openagent_route_phase so the handoff is durable and the correct agent is selected.",
-    "Prefer using the OpenAgent planner, critic, explorer, implementer, reviewer, oracle, QA, or researcher personas when they improve quality or keep context lean.",
+    "When changing phases, use openagent_route_phase so the handoff is durable and the correct agent is selected. For implementation work, use openagent_fleet instead.",
+    "Prefer using the OpenAgent conductor, architect, skeptic, scout, sleuth, builder, auditor, oracle, or tester personas when they improve quality or keep context lean.",
   ];
 
   if (resolution.config.systemDirectives.length > 0) {

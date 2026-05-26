@@ -21,7 +21,7 @@ import { requireOpenAgentWorkspacePath } from "./workspace";
 export const OPENAGENT_BOOTSTRAP_PHASES = [
   "planner",
   "researcher",
-  "implementer",
+  "orchestrator",
 ] as const;
 
 export type OpenAgentBootstrapPhase = (typeof OPENAGENT_BOOTSTRAP_PHASES)[number];
@@ -194,9 +194,9 @@ export function classifyBootstrapPhase(
 
   if (isTightlyScopedImplementerTask(request, normalizedRequest)) {
     return {
-      phase: "implementer",
+      phase: "orchestrator",
       reason:
-        "The request is already tightly scoped to an explicit target, so OpenAgent can start in implementation without a separate planning pass.",
+        "The request is already tightly scoped to an explicit target, so OpenAgent can start in orchestrator and dispatch builders directly.",
       confidence: computeBootstrapConfidence({
         keywordMatchCount: implementKeywordCount,
         hasExplicitScope,
@@ -232,8 +232,8 @@ function buildBootstrapObjective(
   switch (phase) {
     case "researcher":
       return `Investigate the request and return grounded findings: ${requestSummary}`;
-    case "implementer":
-      return `Execute the scoped request end-to-end: ${requestSummary}`;
+    case "orchestrator":
+      return `Execute the scoped request end-to-end using fleet dispatch: ${requestSummary}`;
     default:
       return `Turn the request into an implementation-ready plan: ${requestSummary}`;
   }
@@ -248,19 +248,20 @@ function buildPhaseApproach(phase: OpenAgentBootstrapPhase): string[] {
         "Turn the findings into a narrow implementation path before heavy changes.",
         "Capture follow-up notes or risks that should survive later turns.",
       ];
-    case "implementer":
+    case "orchestrator":
       return [
-        "Inspect the immediate target files and reuse existing helpers or patterns.",
-        "Make the scoped change with minimal churn and keep the flow coherent.",
-        "Validate the change with the existing build and typecheck commands.",
-        "Record durable follow-up notes for the next iteration.",
+        "Inspect the target files and understand the scope before delegating.",
+        "Use `openagent_fleet` to register implementation tasks, then dispatch builders via the `agent` tool.",
+        "Validate each wave by reading changed code and running build/test commands.",
+        "Return a clear summary: what changed, what commands ran, and the results.",
+        "Do not route to the implementer phase — dispatch builders directly.",
       ];
     default:
       return [
         "Inspect the current codebase and constraints before committing to an approach.",
-        "Break the work into concrete implementation tasks and dependencies.",
-        "Route or continue into implementation only after the plan is actionable.",
-        "Validate the final result and capture durable follow-up notes.",
+        "Break the work into concrete implementation tasks, dependencies, and verification steps.",
+        "Return the plan to the conductor when ready. Do not route directly to implementation.",
+        "The conductor decides whether to send the plan to the skeptic or proceed to fleet dispatch.",
       ];
   }
 }
@@ -299,7 +300,7 @@ export function buildInitialPlan(args: {
     "",
     "### Notes",
     toBullets([
-      "Use openagent_route_phase for later phase changes so the handoff stays durable.",
+      "Route phase changes through the orchestrator so the handoff stays durable.",
       "Persist reusable artifacts under files/openagent/ when they will help later turns.",
     ]),
   );
@@ -329,7 +330,7 @@ export function buildBootstrapHandoff(args: {
     "## Coordination notes",
     toBullets([
       "Keep the session plan current as the work becomes more concrete.",
-      "Route again with openagent_route_phase whenever the active phase should change.",
+      "Route through the orchestrator whenever the active phase should change.",
       "Persist durable follow-up artifacts under files/openagent/ when they will help future turns.",
     ]),
   ].join("\n");

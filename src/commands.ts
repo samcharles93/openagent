@@ -453,12 +453,15 @@ export function createCommands(args: {
             cwd: process.cwd() || initialCwd,
             artifactPath: parsedArgs.resumePath,
           });
+          // Guard against stale handoffs saved before fleet dispatch was introduced.
+          const resumePhase =
+            artifact.toPhase === "implementer" ? "orchestrator" : artifact.toPhase;
           const result = await routeOpenAgentPhase({
             session,
             config: resolution.config,
             request: {
-              phase: artifact.toPhase,
-              agent: artifact.toAgent,
+              phase: resumePhase,
+              agent: resumePhase === "orchestrator" ? undefined : artifact.toAgent,
               objective: `Resume handoff: ${artifact.goal}`,
               handoff: buildOpenAgentResumeHandoff(artifact, parsedArgs.resumeNote),
               requestedBy: "oa-start resume command",
@@ -595,15 +598,15 @@ export function createCommands(args: {
           session,
           config: resolution.config,
           request: {
-            phase: "implementer",
+            phase: "orchestrator",
             objective: `Execute refactoring: ${target}`,
             handoff: [
-              "Refactoring checklist:",
-              "1. Read and understand the target code",
-              "2. Check for existing tests covering the target",
-              "3. Make incremental changes with validation after each step",
-              "4. Run build and typecheck after changes",
-              "5. Summarize what changed and remaining risks",
+              "Refactoring objective: execute the scoped refactor described above.",
+              "Use `openagent_fleet` to register implementation tasks and dispatch builders via the `agent` tool.",
+              "1. Break the refactor into non-overlapping scoped tasks per wave",
+              "2. Dispatch all tasks in a wave simultaneously with the `agent` tool",
+              "3. Verify each wave before dispatching the next",
+              "4. Summarize what changed and any remaining risks",
             ].join("\n"),
             requestedBy: "oa-refactor command",
             syncPlan: true,
@@ -747,14 +750,16 @@ export function createCommands(args: {
           session,
           config: resolution.config,
           request: {
-            phase: "implementer",
+            phase: "orchestrator",
             objective: "Execute the active plan end-to-end",
             handoff: [
-              "Execution instructions:",
+              "Execution objective: work through plan.md using fleet dispatch.",
+              "Use `openagent_fleet` to register implementation tasks and dispatch builders via the `agent` tool.",
               "1. Read plan.md from the session workspace",
-              "2. Work through tasks in order",
-              "3. Validate each step before moving to the next",
-              "4. Keep plan.md updated with progress and completion status",
+              "2. Decompose planned tasks into non-overlapping scoped waves",
+              "3. Dispatch all tasks in each wave simultaneously with the `agent` tool",
+              "4. Verify each wave before proceeding to the next",
+              "5. Keep plan.md updated with progress and completion status",
             ].join("\n"),
             requestedBy: "oa-start-work command",
             syncPlan: true,
