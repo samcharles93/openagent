@@ -8,11 +8,12 @@ OpenAgent ships both **native custom agents** (`.agent.md` files) and a full **S
 
 | Feature | Native agents | SDK extension |
 |---|---|---|
-| Custom agent personas (planner, critic, implementer, …) | ✓ | ✓ |
+| Custom agent personas (conductor, architect, builder, …) | ✓ | ✓ |
 | `/oa-*` slash commands | — | ✓ |
-| OpenAgent tools (24 tools) | — | ✓ |
+| OpenAgent tools (25 tools) | — | ✓ |
 | Hooks (plan bias, guardrails, context loading) | — | ✓ |
 | Phase routing and workspace persistence | — | ✓ |
+| Fleet dispatch (`openagent_fleet`) | — | ✓ |
 | Continuation loops (`/oa-loop`) | — | ✓ |
 | Handoff artifacts | — | ✓ |
 
@@ -47,7 +48,7 @@ That command:
 **Native agents only** (works with the standard binary):
 
 ```bash
-copilot --agent openagent-planner
+copilot --agent conductor
 ```
 
 **Full SDK extension** (requires Bun and the Node wrapper):

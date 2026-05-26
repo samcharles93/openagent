@@ -32,13 +32,14 @@ OpenAgent is a Copilot CLI extension harness for orchestration-first work. Sourc
 
 Default routing in `src/routing.ts`:
 
-- `orchestrator` -> `openagent-orchestrator`
-- `planner` -> `openagent-planner`, `openagent-critic`
-- `researcher` -> `openagent-researcher`, `openagent-explorer`
-- `implementer` -> `openagent-implementer`
-- `reviewer` -> `openagent-reviewer`, `openagent-oracle`, `openagent-qa`
+- `orchestrator` -> `conductor`
+- `planner` -> `architect`, `skeptic`
+- `researcher` -> `sleuth`, `scout`
+- `reviewer` -> `auditor`, `oracle`, `tester`
 
-Modes: `planner` = `plan`; `implementer` = `autopilot`; `orchestrator`, `researcher`, and `reviewer` = `interactive`
+Implementation is dispatched via `openagent_fleet` + the `agent` tool — **not** via `openagent_route_phase`. The `implementer` phase has been removed; routing directly to it will error.
+
+Modes: `planner` = `plan`; `orchestrator`, `researcher`, and `reviewer` = `interactive`
 
 ## Commands
 
@@ -46,13 +47,14 @@ Slash commands in `src/commands.ts`:
 
 `oa-init-deep`, `oa-doctor`, `oa-status`, `oa-plan`, `oa-autopilot`, `oa-agent`, `oa-start`, `oa-plan-review`, `oa-route`, `oa-refactor`, `oa-handoff`, `oa-review`, `oa-start-work`
 
-Use `oa-route` or `openagent_route_phase` when switching phases.
+Use `oa-route` or `openagent_route_phase` when switching phases. For implementation, use `openagent_fleet` to register tasks and the `agent` tool to dispatch builders.
 
 ## Tools
 
-OpenAgent exposes 24 tools.
+OpenAgent exposes 25 tools.
 
 - Planning/workspace: `openagent_runtime_status`, `openagent_bootstrap_task`, `openagent_plan_note`, `openagent_workspace_note`, `openagent_route_phase`, `openagent_plan_review`
+- Fleet dispatch: `openagent_fleet` — register implementation waves and get ready-to-dispatch builder payloads
 - Diagnostics/memory/edit safety: `openagent_doctor`, `openagent_memory_write`, `openagent_memory_read`, `openagent_memory_list`, `openagent_safe_edit`
 - Orchestration/history: `openagent_background_*`, `openagent_session_*`, `openagent_delegate`, `openagent_categories_list`
 - Task tracking: `openagent_task_create`, `openagent_task_list`, `openagent_task_get`, `openagent_task_update`
@@ -88,6 +90,8 @@ Durable notes, routing handoffs, and related artifacts live under `files/openage
 
 - Do not hand-edit compiled extension output
 - Do not bypass workspace-backed handoffs for multi-step work
+- Do not use `openagent_route_phase` with `phase: "implementer"` — this is guarded and will error. Use `openagent_fleet` instead.
+- Do not call `write_agent` on completed builders — they are one-shot and terminal
 - Do not let `AGENTS.md` grow into long prose that hides the operational guidance
 - Do not add tool or command behavior without wiring the actual registries
 

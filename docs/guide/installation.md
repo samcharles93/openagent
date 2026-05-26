@@ -38,7 +38,7 @@ GitHub Copilot CLI discovers user extensions from `~/.copilot/extensions/<name>/
 1. Restart `copilot`, or run `/clear` if you already have a session open
 2. Reload VS Code windows that should pick up OpenAgent custom agents
 3. Confirm the extension loaded with `/env` if you want a quick check
-4. Start with `/oa-start <request>` or select an `openagent-*` custom agent
+4. Start with `/oa-start <request>` or select a custom agent (e.g. `conductor`, `architect`)
 
 ### SDK extension (full features)
 
@@ -55,7 +55,7 @@ The native Copilot binary uses itself as `process.execPath`, which breaks `child
 If you only need the custom agent personas (no commands/tools/hooks), use the standard binary:
 
 ```bash
-copilot --agent openagent-planner
+copilot --agent conductor
 ```
 
 ## Optional overrides
