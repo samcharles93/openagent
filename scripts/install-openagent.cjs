@@ -180,9 +180,10 @@ function main() {
   );
 }
 
-// Run when executed directly (node script.cjs), piped via stdin (curl | node),
-// or evaluated via -e/--eval. Skips when require()'d as a library (tests).
-if (require.main === module || process.argv[1] === "-" || process.argv[1] === "-e" || process.argv[1] === "--eval") {
+// Run when executed directly (node script.cjs) or piped via stdin (curl | node).
+// module.parent is null for direct execution, undefined for stdin/-e/--eval.
+// Skips when require()'d as a library — module.parent is set to the calling module.
+if (!module.parent) {
   try {
     main();
   } catch (error) {
