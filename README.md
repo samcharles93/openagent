@@ -21,18 +21,18 @@ Native agents work with the standard `copilot` binary. The SDK extension require
 
 ## Installation
 
-### For humans
+**Prerequisites:** Bun 1.0+, Node 20+, Git.
 
-**macOS / Linux**
+### Quick start
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/samcharles93/openagent/main/scripts/install-openagent.cjs | node
+node -e "$(curl -fsSL https://raw.githubusercontent.com/samcharles93/openagent/main/scripts/install-openagent.cjs)"
 ```
 
-**Windows PowerShell**
+Windows PowerShell:
 
 ```powershell
-(Invoke-WebRequest "https://raw.githubusercontent.com/samcharles93/openagent/main/scripts/install-openagent.cjs").Content | node
+node -e (Invoke-WebRequest "https://raw.githubusercontent.com/samcharles93/openagent/main/scripts/install-openagent.cjs").Content
 ```
 
 That command:
@@ -82,7 +82,7 @@ This installs the Copilot extension wrapper, native agents, and the `copilot-oa`
 
 ## Notes
 
-- The public installer uses Node, `git`, and `npm`.
+- The public installer uses Node, `git`, and Bun.
 - Bun 1.0+ is required for the SDK extension (the `copilot-oa` wrapper).
 - Native custom agents work with Node.js 20+.
 - Set `OPENAGENT_INSTALL_ROOT` to change where the managed checkout is cloned.
@@ -90,3 +90,11 @@ This installs the Copilot extension wrapper, native agents, and the `copilot-oa`
 - Set `COPILOT_AGENTS_DIR` if you want native custom agents written somewhere other than `~/.copilot/agents`.
 - Set `OPENAGENT_BIN_DIR` to change where `copilot-oa` is installed (default: `%APPDATA%\npm` on Windows, `~/.local/bin` elsewhere).
 - Run `bun run setup:agents` to refresh only the native custom agent profiles.
+
+### Safety features
+
+- **Handoff validation** — Builder→Conductor handoffs require build/test verification evidence before committing.
+- **Safe-edit rollback** — Every file edit is backed up to `.openagent-backups/` with full rollback support.
+- **Telemetry scrubbing** — Auth tokens, secrets, and home directory paths are redacted from telemetry output.
+- **Agent-driven compaction** — At 65% token capacity, the runtime prompts agents to self-summarize before the 70% preemptive compaction threshold hits.
+- **PATH auditing** — The installer warns if the bin directory isn't on `$PATH`.

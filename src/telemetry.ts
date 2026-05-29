@@ -1,4 +1,36 @@
 import type { OpenAgentModelTarget } from "./config";
+import { homedir } from "node:os";
+
+// Regex patterns for PII and secrets that should never appear in telemetry output.
+const PII_PATTERNS: Array<{ pattern: RegExp; replacement: string }> = [
+  // Bearer tokens and GitHub PATs
+  { pattern: /ghp_[a-zA-Z0-9]{36,}/g, replacement: "[REDACTED:github-pat]" },
+  { pattern: /github_pat_[a-zA-Z0-9_]{20,}/g, replacement: "[REDACTED:github-pat]" },
+  { pattern: /Bearer\s+[A-Za-z0-9_\-\\.]+/g, replacement: "Bearer [REDACTED]" },
+  // Generic API keys and tokens (alphanumeric strings >32 chars following key-like prefixes)
+  { pattern: /(?:api[_-]?key|apikey|secret|token|password|auth)\s*[:=]\s*["']?[A-Za-z0-9_\-]{20,}["']?/gi, replacement: "$1=[REDACTED]" },
+  // Home directory paths
+  { pattern: new RegExp(homedir().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"), replacement: "~" },
+];
+
+/**
+ * Scrubs known PII patterns from a string before it enters telemetry output.
+ * Applied to the lastFallback field and any string fields in the snapshot.
+ */
+function sanitizeForTelemetry(value: string): string {
+  let sanitized = value;
+  for (const { pattern, replacement } of PII_PATTERNS) {
+    sanitized = sanitized.replace(pattern, replacement);
+  }
+  return sanitized;
+}
+
+function sanitizeSnapshot(snapshot: OpenAgentTelemetrySnapshot): OpenAgentTelemetrySnapshot {
+  return {
+    ...snapshot,
+    lastFallback: snapshot.lastFallback ? sanitizeForTelemetry(snapshot.lastFallback) : null,
+  };
+}
 
 export type OpenAgentTelemetrySnapshot = {
   sessionStartedAt: string;
@@ -144,23 +176,24 @@ export function recordCompactionComplete(success: boolean): void {
 }
 
 export function getOpenAgentTelemetrySnapshot(): OpenAgentTelemetrySnapshot {
-  return { ...telemetry };
+  return sanitizeSnapshot({ ...telemetry });
 }
 
 export function formatOpenAgentTelemetry(snapshot = getOpenAgentTelemetrySnapshot()): string {
+  const safe = sanitizeSnapshot(snapshot);
   const usage =
-    snapshot.lastUsageRatio === null || snapshot.lastUsageTokens === null || snapshot.tokenLimit === null
+    safe.lastUsageRatio === null || safe.lastUsageTokens === null || safe.tokenLimit === null
       ? "usage: unknown"
-      : `usage: ${(snapshot.lastUsageRatio * 100).toFixed(1)}% (${snapshot.lastUsageTokens}/${snapshot.tokenLimit} tokens)`;
+      : `usage: ${(safe.lastUsageRatio * 100).toFixed(1)}% (${safe.lastUsageTokens}/${safe.tokenLimit} tokens)`;
 
   return [
     "OpenAgent telemetry",
-    `session started: ${snapshot.sessionStartedAt}`,
-    `tools: ${snapshot.toolCalls} calls, ${snapshot.toolFailures} failures, ${snapshot.toolDenials} denied`,
-    `tool mix: ${snapshot.readToolCalls} read-like, ${snapshot.editToolCalls} edit-like, ${snapshot.lspCalls} LSP, ${snapshot.astCalls} AST, ${snapshot.lookAtCalls} look_at`,
-    `fallbacks: ${snapshot.fallbackSwitches}${snapshot.lastFallback ? ` (last: ${snapshot.lastFallback})` : ""}`,
-    `loops: ${snapshot.loopStarts} starts, ${snapshot.loopIterations} continuations, ${snapshot.loopCompletions} completions, ${snapshot.loopCancels} cancels`,
-    `compactions: ${snapshot.compactionsStarted} started, ${snapshot.compactionsCompleted} completed, ${snapshot.compactionFailures} failed`,
+    `session started: ${safe.sessionStartedAt}`,
+    `tools: ${safe.toolCalls} calls, ${safe.toolFailures} failures, ${safe.toolDenials} denied`,
+    `tool mix: ${safe.readToolCalls} read-like, ${safe.editToolCalls} edit-like, ${safe.lspCalls} LSP, ${safe.astCalls} AST, ${safe.lookAtCalls} look_at`,
+    `fallbacks: ${safe.fallbackSwitches}${safe.lastFallback ? ` (last: ${safe.lastFallback})` : ""}`,
+    `loops: ${safe.loopStarts} starts, ${safe.loopIterations} continuations, ${safe.loopCompletions} completions, ${safe.loopCancels} cancels`,
+    `compactions: ${safe.compactionsStarted} started, ${safe.compactionsCompleted} completed, ${safe.compactionFailures} failed`,
     usage,
   ].join("\n");
 }

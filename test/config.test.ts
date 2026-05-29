@@ -11,15 +11,15 @@ import {
 describe("config", () => {
   describe("isOpenAgentAgentName", () => {
     it("recognizes valid agent names", () => {
-      assert.ok(isOpenAgentAgentName("openagent-orchestrator"));
-      assert.ok(isOpenAgentAgentName("openagent-planner"));
-      assert.ok(isOpenAgentAgentName("openagent-critic"));
-      assert.ok(isOpenAgentAgentName("openagent-researcher"));
-      assert.ok(isOpenAgentAgentName("openagent-explorer"));
-      assert.ok(isOpenAgentAgentName("openagent-implementer"));
-      assert.ok(isOpenAgentAgentName("openagent-reviewer"));
-      assert.ok(isOpenAgentAgentName("openagent-oracle"));
-      assert.ok(isOpenAgentAgentName("openagent-qa"));
+      assert.ok(isOpenAgentAgentName("conductor"));
+      assert.ok(isOpenAgentAgentName("architect"));
+      assert.ok(isOpenAgentAgentName("skeptic"));
+      assert.ok(isOpenAgentAgentName("sleuth"));
+      assert.ok(isOpenAgentAgentName("scout"));
+      assert.ok(isOpenAgentAgentName("builder"));
+      assert.ok(isOpenAgentAgentName("auditor"));
+      assert.ok(isOpenAgentAgentName("oracle"));
+      assert.ok(isOpenAgentAgentName("tester"));
     });
 
     it("rejects invalid agent names", () => {
@@ -34,22 +34,22 @@ describe("config", () => {
       assert.equal(OPENAGENT_AGENT_NAMES.length, 9);
     });
 
-    it("all start with openagent- prefix", () => {
+    it("does not start with openagent- prefix", () => {
       for (const name of OPENAGENT_AGENT_NAMES) {
-        assert.ok(name.startsWith("openagent-"), `${name} should start with openagent-`);
+        assert.ok(!name.startsWith("openagent-"), `${name} should not start with openagent-`);
       }
     });
   });
 
   describe("formatModelTarget", () => {
     it("formats model without reasoning effort", () => {
-      assert.equal(formatModelTarget({ model: "gpt-4.1" }), "gpt-4.1");
+      assert.equal(formatModelTarget({ model: "gpt-5.5" }), "gpt-5.5");
     });
 
     it("formats model with reasoning effort", () => {
       assert.equal(
-        formatModelTarget({ model: "claude-opus-4", reasoningEffort: "high" }),
-        "claude-opus-4 (high)",
+        formatModelTarget({ model: "claude-opus-4.6", reasoningEffort: "high" }),
+        "claude-opus-4.6 (high)",
       );
     });
   });
@@ -61,17 +61,17 @@ describe("config", () => {
 
     it("formats multiple targets with arrow separator", () => {
       const result = formatModelTargets([
-        { model: "gpt-4.1" },
-        { model: "claude-sonnet-4", reasoningEffort: "medium" },
+        { model: "gpt-5.5" },
+        { model: "claude-sonnet-4.6", reasoningEffort: "medium" },
       ]);
-      assert.equal(result, "gpt-4.1 -> claude-sonnet-4 (medium)");
+      assert.equal(result, "gpt-5.5 -> claude-sonnet-4.6 (medium)");
     });
   });
 
   describe("loadOpenAgentConfig", () => {
     it("returns default config for nonexistent directory", () => {
       const resolution = loadOpenAgentConfig("/tmp/nonexistent-openagent-test-path");
-      assert.equal(resolution.config.defaultAgent, "openagent-orchestrator");
+      assert.equal(resolution.config.defaultAgent, "conductor");
       assert.equal(resolution.config.autoSelectAgent, true);
       assert.ok(Array.isArray(resolution.config.systemDirectives));
       assert.ok(resolution.config.systemDirectives.length > 0);

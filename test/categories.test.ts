@@ -70,7 +70,7 @@ describe("categories", () => {
 
     const deep = overridden.find((c) => c.name === "deep");
     assert.ok(deep);
-    assert.equal(deep.preferredModel, "claude-opus-4");
+    assert.equal(deep.preferredModel, "claude-opus-4.6");
   });
 
   it("formats category summary as readable string", () => {

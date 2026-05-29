@@ -56,24 +56,24 @@ const NO_EDIT_AGENT_DENIED_TOOLS = [
 const DEFAULT_AGENT_MODEL_CONFIGS: Record<OpenAgentAgentName, OpenAgentAgentModelConfig> = {
   "conductor": {
     reasoningEffort: "high",
-    fallbackModels: [{ model: "claude-sonnet-4" }, { model: "gpt-4.1" }],
+    fallbackModels: [{ model: "claude-sonnet-4.6" }, { model: "gpt-5.5" }],
   },
   "architect": {
     reasoningEffort: "high",
     deniedTools: ["bash", "powershell", "shell", "edit", "create", "write", "apply_patch"],
-    fallbackModels: [{ model: "claude-sonnet-4" }, { model: "gpt-4.1" }],
+    fallbackModels: [{ model: "claude-sonnet-4.6" }, { model: "gpt-5.5" }],
   },
   "skeptic": {
-    preferredModel: "claude-sonnet-4",
+    preferredModel: "claude-sonnet-4.6",
     reasoningEffort: "high",
     deniedTools: [...READ_ONLY_AGENT_DENIED_TOOLS],
-    fallbackModels: [{ model: "gpt-5.4", reasoningEffort: "high" }, { model: "gpt-4.1" }],
+    fallbackModels: [{ model: "gpt-5.5", reasoningEffort: "high" }, { model: "gpt-5.5" }],
   },
   "scout": {
-    preferredModel: "gpt-5.4-mini",
+    preferredModel: "gpt-5.5-mini",
     reasoningEffort: "low",
     deniedTools: [...READ_ONLY_AGENT_DENIED_TOOLS],
-    fallbackModels: [{ model: "claude-sonnet-4" }, { model: "gpt-4.1" }],
+    fallbackModels: [{ model: "claude-sonnet-4.6" }, { model: "gpt-5.5" }],
   },
   "builder": {
     reasoningEffort: "medium",
@@ -84,29 +84,29 @@ const DEFAULT_AGENT_MODEL_CONFIGS: Record<OpenAgentAgentName, OpenAgentAgentMode
       "openagent_bootstrap_task",
       "openagent_plan_review",
     ],
-    fallbackModels: [{ model: "gpt-4.1" }, { model: "claude-sonnet-4" }],
+    fallbackModels: [{ model: "gpt-5.5" }, { model: "claude-sonnet-4.6" }],
   },
   "auditor": {
     reasoningEffort: "high",
     deniedTools: ["edit", "create", "write", "apply_patch"],
-    fallbackModels: [{ model: "claude-sonnet-4" }, { model: "gpt-4.1" }],
+    fallbackModels: [{ model: "claude-sonnet-4.6" }, { model: "gpt-5.5" }],
   },
   "oracle": {
-    preferredModel: "gpt-5.4",
+    preferredModel: "gpt-5.5",
     reasoningEffort: "high",
     deniedTools: [...READ_ONLY_AGENT_DENIED_TOOLS],
-    fallbackModels: [{ model: "claude-sonnet-4" }, { model: "gpt-4.1" }],
+    fallbackModels: [{ model: "claude-sonnet-4.6" }, { model: "gpt-5.5" }],
   },
   "tester": {
-    preferredModel: "claude-sonnet-4",
+    preferredModel: "claude-sonnet-4.6",
     reasoningEffort: "medium",
     deniedTools: [...NO_EDIT_AGENT_DENIED_TOOLS],
-    fallbackModels: [{ model: "gpt-5.4", reasoningEffort: "medium" }, { model: "gpt-4.1" }],
+    fallbackModels: [{ model: "gpt-5.5", reasoningEffort: "medium" }, { model: "gpt-5.5" }],
   },
   "sleuth": {
     reasoningEffort: "medium",
     deniedTools: ["edit", "create", "write", "apply_patch"],
-    fallbackModels: [{ model: "gpt-4.1" }, { model: "claude-sonnet-4" }],
+    fallbackModels: [{ model: "gpt-5.5" }, { model: "claude-sonnet-4.6" }],
   },
 };
 

@@ -50,28 +50,28 @@ describe("routing", () => {
   });
 
   describe("inferOpenAgentPhase", () => {
-    it("infers orchestrator for orchestrator agent", () => {
-      assert.equal(inferOpenAgentPhase("openagent-orchestrator"), "orchestrator");
+    it("infers orchestrator for conductor agent", () => {
+      assert.equal(inferOpenAgentPhase("conductor"), "orchestrator");
     });
 
-    it("infers planner for planner and critic agents", () => {
-      assert.equal(inferOpenAgentPhase("openagent-planner"), "planner");
-      assert.equal(inferOpenAgentPhase("openagent-critic"), "planner");
+    it("infers planner for architect and skeptic agents", () => {
+      assert.equal(inferOpenAgentPhase("architect"), "planner");
+      assert.equal(inferOpenAgentPhase("skeptic"), "planner");
     });
 
-    it("infers researcher for researcher and explorer agents", () => {
-      assert.equal(inferOpenAgentPhase("openagent-researcher"), "researcher");
-      assert.equal(inferOpenAgentPhase("openagent-explorer"), "researcher");
+    it("infers researcher for sleuth and scout agents", () => {
+      assert.equal(inferOpenAgentPhase("sleuth"), "researcher");
+      assert.equal(inferOpenAgentPhase("scout"), "researcher");
     });
 
-    it("infers implementer for implementer agent", () => {
-      assert.equal(inferOpenAgentPhase("openagent-implementer"), "implementer");
+    it("infers implementer for builder agent", () => {
+      assert.equal(inferOpenAgentPhase("builder"), "implementer");
     });
 
-    it("infers reviewer for reviewer, oracle, and qa agents", () => {
-      assert.equal(inferOpenAgentPhase("openagent-reviewer"), "reviewer");
-      assert.equal(inferOpenAgentPhase("openagent-oracle"), "reviewer");
-      assert.equal(inferOpenAgentPhase("openagent-qa"), "reviewer");
+    it("infers reviewer for auditor, oracle, and tester agents", () => {
+      assert.equal(inferOpenAgentPhase("auditor"), "reviewer");
+      assert.equal(inferOpenAgentPhase("oracle"), "reviewer");
+      assert.equal(inferOpenAgentPhase("tester"), "reviewer");
     });
 
     it("defaults to orchestrator for null/unknown agents", () => {

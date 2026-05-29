@@ -1,6 +1,19 @@
 import { createHash } from "node:crypto";
-import { readFile, writeFile } from "node:fs/promises";
+import { existsSync, mkdirSync, readdirSync } from "node:fs";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import * as path from "node:path";
+import * as os from "node:os";
+
+const BACKUP_DIR_NAME = ".openagent-backups";
+
+export type OpenAgentSafeEditBackup = {
+  id: string;
+  timestamp: string;
+  originalPath: string;
+  backupPath: string;
+  lineHash: string;
+  oldBlockPreview: string;
+};
 
 function isInsideRoot(candidatePath: string, rootPath: string): boolean {
   const resolvedRoot = path.resolve(rootPath);
@@ -32,6 +45,166 @@ export function hashSafeEditLine(line: string): string {
   return createHash("sha256").update(line, "utf8").digest("hex").slice(0, 16);
 }
 
+// ─── Backup / rollback infrastructure ────────────────────────────────────────
+
+function resolveBackupDir(workspacePath?: string): string {
+  return workspacePath
+    ? path.join(workspacePath, BACKUP_DIR_NAME)
+    : path.join(os.tmpdir(), BACKUP_DIR_NAME);
+}
+
+function ensureBackupDir(workspacePath?: string): string {
+  const dir = resolveBackupDir(workspacePath);
+  mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+/**
+ * Writes a pre-edit snapshot of a file before safe_edit modifies it.
+ * Returns the backup metadata or null if the source file doesn't exist.
+ */
+async function backupBeforeSafeEdit(args: {
+  workspacePath?: string;
+  filePath: string;
+  lineHash: string;
+  oldBlock: string;
+}): Promise<OpenAgentSafeEditBackup | null> {
+  if (!existsSync(args.filePath)) {
+    return null;
+  }
+
+  const originalContent = await readFile(args.filePath, "utf8");
+  const backupDir = ensureBackupDir(args.workspacePath);
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const fileHash = hashSafeEditLine(args.filePath);
+  const id = `backup-${timestamp}-${fileHash}`;
+  const backupFileName = `${id}.bak`;
+  const backupPath = path.join(backupDir, backupFileName);
+
+  await writeFile(backupPath, originalContent, "utf8");
+
+  const oldBlockPreview =
+    args.oldBlock.length > 120
+      ? `${args.oldBlock.slice(0, 120).trimEnd()}...`
+      : args.oldBlock;
+
+  return {
+    id,
+    timestamp,
+    originalPath: args.filePath,
+    backupPath,
+    lineHash: args.lineHash,
+    oldBlockPreview,
+  };
+}
+
+/**
+ * Rolls back a single safe_edit by restoring the pre-edit backup from a known
+ * original path.  Callers should supply the backup metadata originally returned
+ * by backupBeforeSafeEdit (or the backupId field from the edit result).
+ */
+export async function rollbackOpenAgentSafeEdit(args: {
+  workspacePath?: string;
+  backupId: string;
+  originalPath: string;
+}): Promise<string> {
+  const backupDir = resolveBackupDir(args.workspacePath);
+  const backupPath = path.join(backupDir, `${args.backupId}.bak`);
+
+  if (!existsSync(backupPath)) {
+    throw new Error(
+      `Backup not found: ${args.backupId}. Use listOpenAgentSafeEditBackups to list available backups.`,
+    );
+  }
+
+  const originalContent = await readFile(backupPath, "utf8");
+  await writeFile(args.originalPath, originalContent, "utf8");
+  await rm(backupPath, { force: true });
+
+  return args.originalPath;
+}
+
+/**
+ * Rolls back ALL safe_edit backups in reverse chronological order (newest first).
+ * Requires callers to supply a path-resolver so we know which file each backup
+ * belongs to.  If you just want best-effort cleanup, list backups first and
+ * call rollbackOpenAgentSafeEdit individually.
+ */
+export async function rollbackAllOpenAgentSafeEdits(args: {
+  workspacePath?: string;
+  resolvePath: (backupId: string, backupPath: string) => string | null;
+}): Promise<string[]> {
+  const backupDir = resolveBackupDir(args.workspacePath);
+  if (!existsSync(backupDir)) {
+    return [];
+  }
+
+  const entries = readdirSync(backupDir)
+    .filter((f) => f.endsWith(".bak"))
+    .sort()
+    .reverse();
+
+  const restored: string[] = [];
+  for (const entry of entries) {
+    const id = entry.replace(/\.bak$/, "");
+    const bp = path.join(backupDir, entry);
+    const originalPath = args.resolvePath(id, bp);
+    if (!originalPath) continue;
+
+    try {
+      const fp = await rollbackOpenAgentSafeEdit({
+        workspacePath: args.workspacePath,
+        backupId: id,
+        originalPath,
+      });
+      restored.push(fp);
+    } catch {
+      // Skip backups we can't restore
+    }
+  }
+
+  return restored;
+}
+
+/**
+ * Lists available safe_edit backup IDs for inspection.
+ */
+export function listOpenAgentSafeEditBackups(args: {
+  workspacePath?: string;
+}): string[] {
+  const backupDir = resolveBackupDir(args.workspacePath);
+  if (!existsSync(backupDir)) {
+    return [];
+  }
+
+  return readdirSync(backupDir)
+    .filter((f) => f.endsWith(".bak"))
+    .map((f) => f.replace(/\.bak$/, ""))
+    .sort()
+    .reverse();
+}
+
+/**
+ * Formats available safe_edit backups as a human-readable string.
+ */
+export function formatOpenAgentSafeEditBackups(args: {
+  workspacePath?: string;
+}): string {
+  const ids = listOpenAgentSafeEditBackups(args);
+  if (ids.length === 0) {
+    return "OpenAgent safe-edit backups: none";
+  }
+
+  const lines = [`OpenAgent safe-edit backups (${ids.length}):`];
+  for (const id of ids) {
+    lines.push(`  ${id}`);
+  }
+
+  return lines.join("\n");
+}
+
+// ─── Core safe-edit apply ────────────────────────────────────────────────────
+
 export async function applyOpenAgentSafeEdit(args: {
   cwd: string;
   workspacePath?: string;
@@ -43,6 +216,7 @@ export async function applyOpenAgentSafeEdit(args: {
   filePath: string;
   lineNumber: number;
   nextContent: string;
+  backupId: string | null;
 }> {
   const resolvedFilePath = path.resolve(args.cwd, args.file);
   const allowedRoots = [path.resolve(args.cwd)];
@@ -78,6 +252,14 @@ export async function applyOpenAgentSafeEdit(args: {
     );
   }
 
+  // Take a pre-edit snapshot for rollback safety
+  const backup = await backupBeforeSafeEdit({
+    workspacePath: args.workspacePath,
+    filePath: resolvedFilePath,
+    lineHash: args.lineHash,
+    oldBlock: args.oldBlock,
+  });
+
   const nextContent = currentContent.replace(args.oldBlock, args.newBlock);
   await writeFile(resolvedFilePath, nextContent, "utf8");
 
@@ -85,5 +267,6 @@ export async function applyOpenAgentSafeEdit(args: {
     filePath: resolvedFilePath,
     lineNumber,
     nextContent,
+    backupId: backup?.id ?? null,
   };
 }

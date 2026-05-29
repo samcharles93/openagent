@@ -180,7 +180,9 @@ function main() {
   );
 }
 
-if (require.main === module) {
+// Run when executed directly (node script.cjs), piped via stdin (curl | node),
+// or evaluated via -e/--eval. Skips when require()'d as a library (tests).
+if (require.main === module || process.argv[1] === "-" || process.argv[1] === "-e" || process.argv[1] === "--eval") {
   try {
     main();
   } catch (error) {

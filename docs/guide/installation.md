@@ -5,13 +5,13 @@ Install OpenAgent for GitHub Copilot CLI and VS Code Copilot with this one-comma
 **macOS / Linux**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/samcharles93/openagent/main/scripts/install-openagent.cjs | node
+node -e "$(curl -fsSL https://raw.githubusercontent.com/samcharles93/openagent/main/scripts/install-openagent.cjs)"
 ```
 
 **Windows PowerShell**
 
 ```powershell
-(Invoke-WebRequest "https://raw.githubusercontent.com/samcharles93/openagent/main/scripts/install-openagent.cjs").Content | node
+node -e (Invoke-WebRequest "https://raw.githubusercontent.com/samcharles93/openagent/main/scripts/install-openagent.cjs").Content
 ```
 
 ## What the installer does

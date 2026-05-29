@@ -132,9 +132,13 @@ export async function writeOpenAgentHandoffArtifact(args: {
   touchedFiles?: string[];
   refs?: string[];
   latestHandoffPath?: string | null;
+  /** When true, validation errors throw instead of being embedded as warnings. Default true. */
+  enforceValidation?: boolean;
 }): Promise<{
   artifact: OpenAgentHandoffArtifact;
   workspaceRelativePath: string;
+  validationErrors: string[];
+  validationWarnings: string[];
 }> {
   requireOpenAgentWorkspacePath(args.session, "OpenAgent handoff");
   const [agentResult, modeResult, planResult, routeState] = await Promise.all([
@@ -155,6 +159,44 @@ export async function writeOpenAgentHandoffArtifact(args: {
   const fromMode = (args.fromMode ?? routeState?.currentMode ?? modeResult ?? "interactive") as OpenAgentMode;
   const latestHandoffPath = args.latestHandoffPath ?? routeState?.latestHandoffPath ?? null;
   const toPhase = inferOpenAgentPhase(args.targetAgent);
+
+  // ── Handoff validation gate ──────────────────────────────────────────
+  const validationErrors: string[] = [];
+  const validationWarnings: string[] = [];
+
+  // Builder → conductor: must show verification evidence
+  if (fromAgent === "builder" && args.targetAgent === "conductor") {
+    const workDoneRaw = args.workDone ?? [];
+    const workDoneText = workDoneRaw.join(" ").toLowerCase();
+    const hasVerification =
+      /build|compile|test|lint|verify|check|pass/i.test(workDoneText) ||
+      workDoneRaw.some((line) => /^(?:✓|✅|PASS|OK|SUCCESS)/.test(line));
+
+    if (!hasVerification) {
+      const msg =
+        "Builder → Conductor handoff requires build/test verification evidence in workDone. " +
+        "Add build results, test output, or verification steps before handing off.";
+      if (args.enforceValidation !== false) {
+        throw new Error(msg);
+      }
+      validationErrors.push(msg);
+    }
+  }
+
+  // Leaving implementer phase with no touched files
+  if (fromPhase === "implementer" && (args.touchedFiles ?? []).length === 0) {
+    validationWarnings.push(
+      "Handoff from implementer phase with zero touched files — verify that implementation work was actually performed.",
+    );
+  }
+
+  // Empty workDone
+  if ((args.workDone ?? []).length === 0) {
+    validationWarnings.push(
+      "Handoff with empty workDone — add at least one entry describing what was accomplished.",
+    );
+  }
+
   const artifact: OpenAgentHandoffArtifact = {
     version: 2,
     createdAt: new Date().toISOString(),
@@ -198,6 +240,8 @@ export async function writeOpenAgentHandoffArtifact(args: {
   return {
     artifact,
     workspaceRelativePath: note.workspaceRelativePath,
+    validationErrors,
+    validationWarnings,
   };
 }
 

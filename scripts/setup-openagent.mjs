@@ -36,6 +36,24 @@ function runNode(scriptPath, args) {
   }
 }
 
+function checkBinDirOnPath(binDir) {
+  const pathEnv = (process.env.PATH || "").split(path.delimiter).map((p) => p.trim());
+  if (pathEnv.includes(binDir)) return;
+  if (process.platform === "win32") {
+    // Windows PATH is often case-insensitive
+    if (pathEnv.some((p) => p.toLowerCase() === binDir.toLowerCase())) return;
+  }
+  process.stdout.write(
+    [
+      `\n⚠  ${binDir} is NOT on your PATH. Add it to use the 'copilot-oa' command from any terminal.`,
+      process.platform === "win32"
+        ? `   Run: [Environment]::SetEnvironmentVariable('PATH', $env:PATH + ';${binDir}', 'User')`
+        : `   Add to your shell rc file: export PATH="${binDir}:$PATH"`,
+      "",
+    ].join("\n"),
+  );
+}
+
 function installNodeWrapper(scriptsDir) {
   const isWindows = process.platform === "win32";
   const wrapperFilename = isWindows ? "copilot-via-node.ps1" : "copilot-via-node.sh";
@@ -48,6 +66,7 @@ function installNodeWrapper(scriptsDir) {
 
   const binDir = process.env.OPENAGENT_BIN_DIR?.trim() || getDefaultBinDir();
   mkdirSync(binDir, { recursive: true });
+  checkBinDirOnPath(binDir);
 
   if (isWindows) {
     const targetPath = path.join(binDir, "copilot-oa.ps1");

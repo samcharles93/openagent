@@ -16,6 +16,7 @@ function findBun() {
   }
   for (const candidate of [
     path.join(os.homedir(), ".bun", "bin", "bun"),
+    path.join(os.homedir(), ".local", "bin", "bun"),
     "/usr/local/bin/bun",
     "/usr/bin/bun",
   ]) {
