@@ -26,13 +26,13 @@ Native agents work with the standard `copilot` binary. The SDK extension require
 ### Quick start
 
 ```bash
-node -e "$(curl -fsSL https://raw.githubusercontent.com/samcharles93/openagent/main/scripts/install-openagent.cjs)"
+curl -fsSL https://raw.githubusercontent.com/samcharles93/openagent/main/scripts/install-openagent.cjs | node
 ```
 
 Windows PowerShell:
 
 ```powershell
-node -e (Invoke-WebRequest "https://raw.githubusercontent.com/samcharles93/openagent/main/scripts/install-openagent.cjs").Content
+(Invoke-WebRequest "https://raw.githubusercontent.com/samcharles93/openagent/main/scripts/install-openagent.cjs").Content | node
 ```
 
 That command:
