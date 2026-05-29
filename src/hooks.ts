@@ -1,4 +1,6 @@
 import { existsSync } from "node:fs";
+import { mkdir, writeFile } from "node:fs/promises";
+import * as path from "node:path";
 import type { CopilotSession, SessionConfig, ToolResultObject } from "@github/copilot-sdk";
 import { loadAncestorAgentContext } from "./agents-md";
 import { isToolDeniedForAgent, switchSessionModelTarget } from "./agent-models";
@@ -63,6 +65,8 @@ const EDIT_TOOL_NAMES = new Set([
 const READ_CONTEXT_TOOL_NAMES = new Set(["read", "view"]);
 
 let currentAgentName: OpenAgentAgentName | null = null;
+const editedFilesThisSession = new Set<string>();
+const phasesVisitedThisSession = new Set<string>();
 
 export function setCurrentAgentName(agentName: OpenAgentAgentName): void {
   currentAgentName = agentName;
@@ -226,14 +230,11 @@ export function createHooks(args: {
   getSession?: () => CopilotSession;
 }): SessionHooks {
   const { initialCwd, getSession } = args;
-  // Note: disabledHooks config exists but hook filtering is not yet implemented.
-  // Hooks are not individually named in the same way as tools/commands/agents,
-  // so disabling specific hooks would require a naming convention for each handler.
   const sessionStartTime = new Date().toISOString();
 
   return {
     onSessionStart: async (input: SessionStartHookInput) => {
-      const cwd = input.cwd || initialCwd;
+      const cwd = input.workingDirectory || initialCwd;
       const resolution = loadOpenAgentConfig(cwd);
       const promptContext = buildPromptContext(resolution, {
         forcePlan: Boolean(input.initialPrompt),
@@ -248,7 +249,7 @@ export function createHooks(args: {
       return { additionalContext };
     },
     onUserPromptSubmitted: async (input: UserPromptSubmittedHookInput) => {
-      const resolution = loadOpenAgentConfig(input.cwd || initialCwd);
+      const resolution = loadOpenAgentConfig(input.workingDirectory || initialCwd);
       const session = safeGetSession(getSession);
       if (session && currentAgentName) {
         try {
@@ -273,7 +274,7 @@ export function createHooks(args: {
       }
 
       // Check for skill trigger matches
-      const cwd = input.cwd || initialCwd;
+      const cwd = input.workingDirectory || initialCwd;
       const skills = await loadSkills(cwd);
       if (skills.length > 0) {
         const matched = matchSkillByTrigger(skills, input.prompt);
@@ -290,8 +291,25 @@ export function createHooks(args: {
       return undefined;
     },
     onPreToolUse: async (input: PreToolUseHookInput) => {
-      const resolution = loadOpenAgentConfig(input.cwd || initialCwd);
+      const resolution = loadOpenAgentConfig(input.workingDirectory || initialCwd);
       recordToolCall(input.toolName);
+
+      if (EDIT_TOOL_NAMES.has(input.toolName)) {
+        const filePath = extractFilePath(input.toolArgs);
+        if (filePath) {
+          editedFilesThisSession.add(filePath);
+        }
+      }
+
+      if (input.toolName === "openagent_route_phase") {
+        const phase =
+          isRecord(input.toolArgs) && typeof input.toolArgs.phase === "string"
+            ? input.toolArgs.phase
+            : null;
+        if (phase) {
+          phasesVisitedThisSession.add(phase);
+        }
+      }
 
       if (SHELL_TOOL_NAMES.has(input.toolName)) {
         const command = extractShellCommand(input.toolArgs);
@@ -338,7 +356,7 @@ export function createHooks(args: {
         const filePath = extractFilePath(input.toolArgs);
         if (filePath) {
           const ancestorAgentFiles = await loadAncestorAgentContext({
-            cwd: input.cwd || initialCwd,
+            cwd: input.workingDirectory || initialCwd,
             targetPath: filePath,
           });
 
@@ -353,7 +371,7 @@ export function createHooks(args: {
       return undefined;
     },
     onPostToolUse: async (input: PostToolUseHookInput) => {
-      const resolution = loadOpenAgentConfig(input.cwd || initialCwd);
+      const resolution = loadOpenAgentConfig(input.workingDirectory || initialCwd);
       if (input.toolResult.resultType === "failure") {
         recordToolFailure();
       }
@@ -412,7 +430,7 @@ export function createHooks(args: {
               ? inputRecord.workspacePath
               : null;
         const cwd =
-          typeof inputRecord.cwd === "string" ? inputRecord.cwd : initialCwd;
+          typeof inputRecord.workingDirectory === "string" ? inputRecord.workingDirectory : initialCwd;
         const resolution = loadOpenAgentConfig(cwd);
 
         if (workspacePath && workspacePath.length > 0) {
@@ -422,9 +440,43 @@ export function createHooks(args: {
             reason: typeof input.reason === "string" ? input.reason : "unknown",
             summary,
             agentName: currentAgentName,
-            phasesVisited: [],
-            keyFiles: [],
+            phasesVisited: [...phasesVisitedThisSession],
+            keyFiles: [...editedFilesThisSession],
           });
+        }
+
+        const lastSessionContent = [
+          `# Last Session`,
+          ``,
+          `**Ended:** ${new Date().toISOString()}`,
+          `**Agent:** ${currentAgentName ?? "none"}`,
+          `**Reason:** ${typeof input.reason === "string" ? input.reason : "unknown"}`,
+          phasesVisitedThisSession.size > 0
+            ? `**Phases:** ${[...phasesVisitedThisSession].join(", ")}`
+            : `**Phases:** none`,
+          ``,
+          `## Summary`,
+          ``,
+          summary,
+          ``,
+          `## Files Touched`,
+          ``,
+          editedFilesThisSession.size > 0
+            ? [...editedFilesThisSession].map((f) => `- ${f}`).join("\n")
+            : "_No files edited._",
+        ].join("\n");
+
+        const openagentDir = path.join(cwd, ".openagent");
+        await mkdir(openagentDir, { recursive: true });
+        await writeFile(
+          path.join(openagentDir, "last-session.md"),
+          lastSessionContent,
+          "utf8",
+        );
+
+        const gitignorePath = path.join(openagentDir, ".gitignore");
+        if (!existsSync(gitignorePath)) {
+          await writeFile(gitignorePath, "last-session.md\n", "utf8");
         }
 
         await recordContinuousImprovementArtifact({
@@ -465,7 +517,7 @@ export function createHooks(args: {
         };
       }
 
-      const resolution = loadOpenAgentConfig(input.cwd || initialCwd);
+      const resolution = loadOpenAgentConfig(input.workingDirectory || initialCwd);
       const recovery = classifyRecoveryError(input.error);
       const session = safeGetSession(getSession);
       const agentName = getCurrentAgentName();

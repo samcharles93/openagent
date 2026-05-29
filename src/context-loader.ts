@@ -70,6 +70,9 @@ export async function loadProjectContext(
   // 1. AGENTS.md
   candidates.push({ relativePath: "AGENTS.md", maxChars: MAX_SINGLE_FILE_CHARS });
 
+  // 1a. .openagent/last-session.md (continuity from prior session)
+  candidates.push({ relativePath: path.join(".openagent", "last-session.md"), maxChars: 1500 });
+
   // 2. README.md (first 2000 chars)
   candidates.push({ relativePath: "README.md", maxChars: README_TRUNCATE_CHARS });
 

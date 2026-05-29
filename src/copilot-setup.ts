@@ -1,5 +1,6 @@
 import {
   CopilotClient,
+  RuntimeConnection,
   approveAll,
   type CopilotSession,
   type SessionConfig,
@@ -22,7 +23,7 @@ export function getBundledCopilotCliPathOrThrow(): string {
 
 export function createBundledCopilotClient(): CopilotClient {
   return new CopilotClient({
-    cliPath: getBundledCopilotCliPathOrThrow(),
+    connection: RuntimeConnection.forStdio({ path: getBundledCopilotCliPathOrThrow() }),
     useLoggedInUser: true,
     logLevel: "error",
     env: {

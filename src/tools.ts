@@ -67,10 +67,15 @@ import {
   formatOpenAgentTelemetry,
 } from "./telemetry";
 import {
-  clearFleetState,
+  clearFleetLog,
   formatFleetDispatchInstructions,
-  writeFleetState,
+  readFleetLog,
+  updateFleetTaskStatus,
+  writeFleetWave,
+  type FleetLog,
   type FleetTask,
+  type FleetTaskStatus,
+  type FleetWave,
 } from "./fleet";
 import {
   formatOpenAgentRoutingStatus,
@@ -598,7 +603,7 @@ export function createTools(args: {
         [
           "OpenAgent runtime status",
           formatConfigSummary(resolution),
-          `mode: ${mode.mode}`,
+          `mode: ${mode}`,
           `model: ${model.modelId ?? "host default"}`,
           `agent: ${agent.agent?.name ?? "host default"}`,
           `workspace path: ${session.workspacePath ?? "disabled"}`,
@@ -911,32 +916,119 @@ export function createTools(args: {
 
       const parsedArgs = parseFleetArgs(args);
       const resolution = loadOpenAgentConfig(resolveCwd(initialCwd));
-      const existing = await import("./fleet").then((m) =>
-        m.readFleetState({ session, config: resolution.config }),
-      );
-      const wave = existing ? existing.wave + 1 : 1;
-      const id = `fleet-${new Date().toISOString().replace(/[:.]/g, "-")}`;
 
-      const tasks: FleetTask[] = parsedArgs.tasks.map((t, i) => ({
-        id: `${id}-task-${i + 1}`,
-        title: t.title,
-        description: t.description,
-        scope: t.scope,
-      }));
-
-      const state = {
-        id,
+      const { log, wave } = await writeFleetWave({
+        session,
+        config: resolution.config,
         objective: parsedArgs.objective,
-        wave,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        tasks,
-      };
+        tasks: parsedArgs.tasks,
+      });
 
-      await writeFleetState({ session, config: resolution.config, state });
+      const instructions = formatFleetDispatchInstructions(log, wave);
+      return createSuccessResult(instructions, `Fleet ${log.id} wave ${wave.wave} registered with ${wave.tasks.length} task(s).`);
+    },
+  };
 
-      const instructions = formatFleetDispatchInstructions(state);
-      return createSuccessResult(instructions, `Fleet ${id} registered with ${tasks.length} task(s).`);
+  const fleetStatusTool: Tool = {
+    name: "openagent_fleet_status",
+    description:
+      "Read the current fleet log: all waves, tasks, and their statuses. Use after dispatching builders to check progress.",
+    parameters: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
+    handler: async () => {
+      const session = getSession();
+      if (!isOpenAgentWorkspaceAvailable(session)) {
+        const message = formatOpenAgentWorkspaceRequirement("openagent_fleet_status");
+        return createFailureResult(message, message);
+      }
+
+      const resolution = loadOpenAgentConfig(resolveCwd(initialCwd));
+      const log = await readFleetLog({ session, config: resolution.config });
+
+      if (!log) {
+        return createSuccessResult("No active fleet log.", "No active fleet.");
+      }
+
+      const lines: string[] = [
+        `Fleet: ${log.id}`,
+        `Objective: ${log.objective}`,
+        `Created: ${log.createdAt}  Updated: ${log.updatedAt}`,
+        `Waves: ${log.waves.length}`,
+        "",
+      ];
+
+      for (const wave of log.waves) {
+        lines.push(`Wave ${wave.wave} — ${wave.objective} (${wave.tasks.length} tasks)`);
+        for (const task of wave.tasks) {
+          const status = task.status.toUpperCase().padEnd(10);
+          const notes = task.notes ? ` — ${task.notes}` : "";
+          lines.push(`  [${status}] ${task.id}: ${task.title}${notes}`);
+        }
+        lines.push("");
+      }
+
+      const text = lines.join("\n");
+      return createSuccessResult(text, `Fleet log has ${log.waves.length} wave(s).`);
+    },
+  };
+
+  const fleetCompleteTool: Tool = {
+    name: "openagent_fleet_complete",
+    description:
+      "Mark a fleet task as completed or failed. Call this after reading and verifying a builder agent's output. task_id must match a task id from the fleet log.",
+    parameters: {
+      type: "object",
+      properties: {
+        task_id: {
+          type: "string",
+          description: "The task id to update (from openagent_fleet_status).",
+        },
+        status: {
+          type: "string",
+          enum: ["completed", "failed"],
+          description: "The outcome of the task.",
+        },
+        notes: {
+          type: "string",
+          description: "Optional short notes about the outcome or any follow-up needed.",
+        },
+      },
+      required: ["task_id", "status"],
+    },
+    handler: async (args) => {
+      const session = getSession();
+      if (!isOpenAgentWorkspaceAvailable(session)) {
+        const message = formatOpenAgentWorkspaceRequirement("openagent_fleet_complete");
+        return createFailureResult(message, message);
+      }
+
+      const taskId = (args as Record<string, unknown>).task_id as string;
+      const status = (args as Record<string, unknown>).status as FleetTaskStatus;
+      const notes = (args as Record<string, unknown>).notes as string | undefined;
+
+      const resolution = loadOpenAgentConfig(resolveCwd(initialCwd));
+      const result = await updateFleetTaskStatus({
+        session,
+        config: resolution.config,
+        taskId,
+        status,
+        notes,
+      });
+
+      if (!result.found) {
+        return createFailureResult(
+          `Task "${taskId}" not found in fleet log.`,
+          `Task not found.`,
+        );
+      }
+
+      return createSuccessResult(
+        `Task "${taskId}" marked as ${status}.${notes ? ` Notes: ${notes}` : ""}`,
+        `Task ${status}.`,
+      );
     },
   };
 
@@ -2083,6 +2175,8 @@ export function createTools(args: {
     workspaceNoteTool,
     routePhaseTool,
     fleetTool,
+    fleetStatusTool,
+    fleetCompleteTool,
     planReviewTool,
     doctorTool,
     memoryWriteTool,

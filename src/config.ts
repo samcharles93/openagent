@@ -96,7 +96,6 @@ export type OpenAgentConfig = {
   agents: Record<string, OpenAgentAgentDefinition>;
   categories: Record<string, OpenAgentCategoryConfigOverride>;
   disabledAgents: string[];
-  disabledHooks: string[];
   disabledTools: string[];
   disabledCommands: string[];
 };
@@ -124,7 +123,6 @@ type RawOpenAgentConfig = {
   agents?: unknown;
   categories?: unknown;
   disabledAgents?: unknown;
-  disabledHooks?: unknown;
   disabledTools?: unknown;
   disabledCommands?: unknown;
 };
@@ -166,7 +164,6 @@ const DEFAULT_CONFIG: OpenAgentConfig = {
   agents: {},
   categories: {},
   disabledAgents: [],
-  disabledHooks: [],
   disabledTools: [],
   disabledCommands: [],
 };
@@ -188,7 +185,6 @@ function cloneDefaultConfig(): OpenAgentConfig {
     agents: {},
     categories: {},
     disabledAgents: [],
-    disabledHooks: [],
     disabledTools: [],
     disabledCommands: [],
   };
@@ -395,7 +391,6 @@ function applyConfigPatch(
     agents: { ...base.agents },
     categories: { ...base.categories },
     disabledAgents: [...base.disabledAgents],
-    disabledHooks: [...base.disabledHooks],
     disabledTools: [...base.disabledTools],
     disabledCommands: [...base.disabledCommands],
   };
@@ -608,11 +603,6 @@ function applyConfigPatch(
     next.disabledAgents = uniqueStrings([...next.disabledAgents, ...disabledAgents]);
   }
 
-  const disabledHooks = normalizeStringArray(patch.disabledHooks);
-  if (disabledHooks) {
-    next.disabledHooks = uniqueStrings([...next.disabledHooks, ...disabledHooks]);
-  }
-
   const disabledTools = normalizeStringArray(patch.disabledTools);
   if (disabledTools) {
     next.disabledTools = uniqueStrings([...next.disabledTools, ...disabledTools]);
@@ -688,9 +678,6 @@ export function formatConfigSummary(resolution: OpenAgentConfigResolution): stri
   const disabledCounts: string[] = [];
   if (config.disabledAgents.length > 0) {
     disabledCounts.push(`${config.disabledAgents.length} agents`);
-  }
-  if (config.disabledHooks.length > 0) {
-    disabledCounts.push(`${config.disabledHooks.length} hooks`);
   }
   if (config.disabledTools.length > 0) {
     disabledCounts.push(`${config.disabledTools.length} tools`);

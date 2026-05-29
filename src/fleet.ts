@@ -5,20 +5,33 @@ import type { CopilotSession } from "@github/copilot-sdk";
 import type { OpenAgentConfig } from "./config";
 import { getOpenAgentWorkspacePaths } from "./workspace";
 
+export type FleetTaskStatus = "pending" | "dispatched" | "completed" | "failed";
+
 export type FleetTask = {
   id: string;
   title: string;
   description: string;
   scope?: string;
+  status: FleetTaskStatus;
+  dispatchedAt?: string;
+  completedAt?: string;
+  notes?: string;
 };
 
-export type FleetState = {
-  id: string;
-  objective: string;
+export type FleetWave = {
+  id: string; // e.g., "fleet-{timestamp}-wave-{n}"
   wave: number;
+  objective: string;
+  createdAt: string;
+  tasks: FleetTask[];
+};
+
+export type FleetLog = {
+  id: string; // e.g., "fleet-{timestamp}" (based on first wave's creation time)
+  objective: string;
   createdAt: string;
   updatedAt: string;
-  tasks: FleetTask[];
+  waves: FleetWave[];
 };
 
 function getFleetFilePath(session: CopilotSession, config: OpenAgentConfig): string {
@@ -26,21 +39,63 @@ function getFleetFilePath(session: CopilotSession, config: OpenAgentConfig): str
   return path.join(paths.routingRoot, "fleet.json");
 }
 
-export async function writeFleetState(args: {
+export async function writeFleetWave(args: {
   session: CopilotSession;
   config: OpenAgentConfig;
-  state: FleetState;
-}): Promise<void> {
-  const { session, config, state } = args;
+  objective: string;
+  tasks: Array<{ title: string; description: string; scope?: string }>;
+}): Promise<{ log: FleetLog; wave: FleetWave }> {
+  const { session, config, objective, tasks } = args;
+
+  const existingLog = await readFleetLog({ session, config });
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const waveNumber = existingLog ? existingLog.waves.length + 1 : 1;
+  const waveId = `fleet-${timestamp}-wave-${waveNumber}`;
+
+  const now = new Date().toISOString();
+
+  const wave: FleetWave = {
+    id: waveId,
+    wave: waveNumber,
+    objective,
+    createdAt: now,
+    tasks: tasks.map((t, i) => ({
+      id: `${waveId}-task-${i + 1}`,
+      title: t.title,
+      description: t.description,
+      scope: t.scope,
+      status: "dispatched",
+      dispatchedAt: now,
+    })),
+  };
+
+  const log: FleetLog = existingLog
+    ? {
+        ...existingLog,
+        objective,
+        updatedAt: now,
+        waves: [...existingLog.waves, wave],
+      }
+    : {
+        id: `fleet-${timestamp}`,
+        objective,
+        createdAt: now,
+        updatedAt: now,
+        waves: [wave],
+      };
+
   const paths = getOpenAgentWorkspacePaths({ session, config });
   await mkdir(paths.routingRoot, { recursive: true });
-  await writeFile(getFleetFilePath(session, config), JSON.stringify(state, null, 2), "utf8");
+  await writeFile(getFleetFilePath(session, config), JSON.stringify(log, null, 2), "utf8");
+
+  return { log, wave };
 }
 
-export async function readFleetState(args: {
+export async function readFleetLog(args: {
   session: CopilotSession;
   config: OpenAgentConfig;
-}): Promise<FleetState | null> {
+}): Promise<FleetLog | null> {
   const { session, config } = args;
   const filePath = getFleetFilePath(session, config);
   if (!existsSync(filePath)) {
@@ -48,13 +103,57 @@ export async function readFleetState(args: {
   }
   try {
     const content = await readFile(filePath, "utf8");
-    return JSON.parse(content) as FleetState;
+    return JSON.parse(content) as FleetLog;
   } catch {
     return null;
   }
 }
 
-export async function clearFleetState(args: {
+export async function updateFleetTaskStatus(args: {
+  session: CopilotSession;
+  config: OpenAgentConfig;
+  taskId: string;
+  status: FleetTaskStatus;
+  notes?: string;
+}): Promise<{ found: boolean }> {
+  const { session, config, taskId, status, notes } = args;
+
+  const log = await readFleetLog({ session, config });
+  if (!log) {
+    return { found: false };
+  }
+
+  let found = false;
+  for (const wave of log.waves) {
+    for (const task of wave.tasks) {
+      if (task.id === taskId) {
+        task.status = status;
+        if (notes !== undefined) {
+          task.notes = notes;
+        }
+        if (status === "completed" || status === "failed") {
+          task.completedAt = new Date().toISOString();
+        }
+        found = true;
+        break;
+      }
+    }
+    if (found) break;
+  }
+
+  if (!found) {
+    return { found: false };
+  }
+
+  log.updatedAt = new Date().toISOString();
+  const paths = getOpenAgentWorkspacePaths({ session, config });
+  await mkdir(paths.routingRoot, { recursive: true });
+  await writeFile(getFleetFilePath(session, config), JSON.stringify(log, null, 2), "utf8");
+
+  return { found: true };
+}
+
+export async function clearFleetLog(args: {
   session: CopilotSession;
   config: OpenAgentConfig;
 }): Promise<void> {
@@ -65,13 +164,13 @@ export async function clearFleetState(args: {
   }
 }
 
-export function formatFleetDispatchInstructions(state: FleetState): string {
-  const { id, objective, wave, tasks } = state;
+export function formatFleetDispatchInstructions(log: FleetLog, wave: FleetWave): string {
+  const { tasks } = wave;
   const plural = tasks.length === 1 ? "task" : "tasks";
   const header = [
-    `Fleet ${id} registered.`,
-    `Objective: ${objective}`,
-    `Wave: ${wave} — ${tasks.length} ${plural}`,
+    `Fleet ${log.id} registered.`,
+    `Objective: ${wave.objective}`,
+    `Wave: ${wave.wave} — ${tasks.length} ${plural}`,
     "",
     tasks.length === 1
       ? `Dispatch the following task by calling the \`agent\` tool:`
@@ -87,7 +186,7 @@ export function formatFleetDispatchInstructions(state: FleetState): string {
         .replace(/^-+|-+$/g, "")
         .slice(0, 40);
       const prompt = [
-        `Fleet ${id}, wave ${wave}, task ${i + 1} of ${tasks.length}.`,
+        `Fleet ${log.id}, wave ${wave.wave}, task ${i + 1} of ${tasks.length}.`,
         ``,
         `Task: ${task.title}`,
         `Objective: ${task.description}`,

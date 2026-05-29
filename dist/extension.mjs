@@ -1,176 +1,3 @@
-var __defProp = Object.defineProperty;
-var __returnValue = (v) => v;
-function __exportSetter(name, newValue) {
-  this[name] = __returnValue.bind(null, newValue);
-}
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, {
-      get: all[name],
-      enumerable: true,
-      configurable: true,
-      set: __exportSetter.bind(all, name)
-    });
-};
-var __esm = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
-
-// src/workspace.ts
-import { existsSync as existsSync4 } from "node:fs";
-import { mkdir as mkdir3, readFile as readFile3, writeFile as writeFile3 } from "node:fs/promises";
-import * as path4 from "node:path";
-function isOpenAgentWorkspaceAvailable(session) {
-  return typeof session.workspacePath === "string" && session.workspacePath.length > 0;
-}
-function formatOpenAgentWorkspaceRequirement(action) {
-  return `${action} requires the session workspace because OpenAgent persists durable handoffs and notes under files/openagent/.`;
-}
-function requireOpenAgentWorkspacePath(session, action = "This action") {
-  const { workspacePath } = session;
-  if (typeof workspacePath !== "string" || workspacePath.length === 0) {
-    throw new Error(formatOpenAgentWorkspaceRequirement(action));
-  }
-  return workspacePath;
-}
-function normalizeOpenAgentRelativePath(rawPath) {
-  const normalized = rawPath.replace(/\\/g, "/").split("/").map((segment) => segment.trim()).filter((segment) => segment.length > 0 && segment !== ".");
-  if (normalized.length === 0 || normalized.some((segment) => segment === "..")) {
-    throw new Error("Workspace note path must stay inside the OpenAgent notes directory.");
-  }
-  const joined = normalized.join("/");
-  return path4.posix.extname(joined).length > 0 ? joined : `${joined}.md`;
-}
-function getOpenAgentWorkspacePaths(args) {
-  const { session, config } = args;
-  const workspacePath = requireOpenAgentWorkspacePath(session);
-  const notesRoot = path4.join(workspacePath, "files", ...config.workspace.notesDirectory.split("/"));
-  return {
-    workspacePath,
-    notesRoot,
-    routingRoot: path4.join(notesRoot, "routing"),
-    handoffsRoot: path4.join(notesRoot, "routing", "handoffs"),
-    routeStateFile: path4.join(notesRoot, "routing", "route-state.json")
-  };
-}
-async function writeOpenAgentWorkspaceNote(args) {
-  const { session, config, content } = args;
-  const fileMode = args.mode === "replace" ? "replace" : "append";
-  const relativePath = normalizeOpenAgentRelativePath(args.relativePath);
-  const paths = getOpenAgentWorkspacePaths({ session, config });
-  const fullPath = path4.join(paths.notesRoot, ...relativePath.split("/"));
-  await mkdir3(path4.dirname(fullPath), { recursive: true });
-  let nextContent = content;
-  if (fileMode === "append" && existsSync4(fullPath)) {
-    const current = await readFile3(fullPath, "utf8");
-    nextContent = `${current.trimEnd()}
-
-${content}`;
-  }
-  await writeFile3(fullPath, nextContent, "utf8");
-  return {
-    fullPath,
-    workspaceRelativePath: path4.relative(paths.workspacePath, fullPath),
-    nextContent
-  };
-}
-var init_workspace = () => {};
-
-// src/fleet.ts
-var exports_fleet = {};
-__export(exports_fleet, {
-  writeFleetState: () => writeFleetState,
-  readFleetState: () => readFleetState,
-  formatFleetDispatchInstructions: () => formatFleetDispatchInstructions,
-  clearFleetState: () => clearFleetState
-});
-import { existsSync as existsSync19 } from "node:fs";
-import { mkdir as mkdir9, readFile as readFile15, unlink as unlink2, writeFile as writeFile11 } from "node:fs/promises";
-import * as path20 from "node:path";
-function getFleetFilePath(session, config) {
-  const paths = getOpenAgentWorkspacePaths({ session, config });
-  return path20.join(paths.routingRoot, "fleet.json");
-}
-async function writeFleetState(args) {
-  const { session, config, state } = args;
-  const paths = getOpenAgentWorkspacePaths({ session, config });
-  await mkdir9(paths.routingRoot, { recursive: true });
-  await writeFile11(getFleetFilePath(session, config), JSON.stringify(state, null, 2), "utf8");
-}
-async function readFleetState(args) {
-  const { session, config } = args;
-  const filePath = getFleetFilePath(session, config);
-  if (!existsSync19(filePath)) {
-    return null;
-  }
-  try {
-    const content = await readFile15(filePath, "utf8");
-    return JSON.parse(content);
-  } catch {
-    return null;
-  }
-}
-async function clearFleetState(args) {
-  const { session, config } = args;
-  const filePath = getFleetFilePath(session, config);
-  if (existsSync19(filePath)) {
-    await unlink2(filePath);
-  }
-}
-function formatFleetDispatchInstructions(state) {
-  const { id, objective, wave, tasks } = state;
-  const plural = tasks.length === 1 ? "task" : "tasks";
-  const header = [
-    `Fleet ${id} registered.`,
-    `Objective: ${objective}`,
-    `Wave: ${wave} — ${tasks.length} ${plural}`,
-    "",
-    tasks.length === 1 ? `Dispatch the following task by calling the \`agent\` tool:` : `Dispatch ALL ${tasks.length} tasks simultaneously in a **single response** by calling the \`agent\` tool once per task:`,
-    ""
-  ].join(`
-`);
-  const taskBlocks = tasks.map((task, i) => {
-    const safeName = task.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
-    const prompt = [
-      `Fleet ${id}, wave ${wave}, task ${i + 1} of ${tasks.length}.`,
-      ``,
-      `Task: ${task.title}`,
-      `Objective: ${task.description}`,
-      task.scope ? `Scope (files/packages to modify): ${task.scope}` : "",
-      ``,
-      `Complete this task fully. Return a single final report containing:`,
-      `1. Files changed (with one-line reason each)`,
-      `2. Build/test results`,
-      `3. Any blockers or follow-up needed`,
-      ``,
-      `IMPORTANT: After sending your report, stop. Do not continue working, do not ask follow-up questions, do not wait for further input. This is a terminal one-shot task.`
-    ].filter((l) => l !== undefined).join(`
-`);
-    return [
-      `--- Task ${i + 1} of ${tasks.length}: ${task.title} ---`,
-      `agent_type: builder`,
-      `name: ${safeName}`,
-      `description: ${task.title.slice(0, 60)}`,
-      `mode: background`,
-      `prompt:`,
-      prompt.split(`
-`).map((l) => `  ${l}`).join(`
-`)
-    ].join(`
-`);
-  }).join(`
-
-`);
-  const footer = [
-    "",
-    tasks.length > 1 ? "Call the `agent` tool for all tasks above in one response to dispatch them in parallel." : "Call the `agent` tool with the parameters above.",
-    "After all agents complete, read and verify each output before proceeding to the next wave or review."
-  ].join(`
-`);
-  return header + taskBlocks + footer;
-}
-var init_fleet = __esm(() => {
-  init_workspace();
-});
-
 // src/extension.mts
 import { joinSession } from "@github/copilot-sdk/extension";
 
@@ -438,7 +265,6 @@ var DEFAULT_CONFIG = {
   agents: {},
   categories: {},
   disabledAgents: [],
-  disabledHooks: [],
   disabledTools: [],
   disabledCommands: []
 };
@@ -459,7 +285,6 @@ function cloneDefaultConfig() {
     agents: {},
     categories: {},
     disabledAgents: [],
-    disabledHooks: [],
     disabledTools: [],
     disabledCommands: []
   };
@@ -603,7 +428,6 @@ function applyConfigPatch(base, patch, sourcePath) {
     agents: { ...base.agents },
     categories: { ...base.categories },
     disabledAgents: [...base.disabledAgents],
-    disabledHooks: [...base.disabledHooks],
     disabledTools: [...base.disabledTools],
     disabledCommands: [...base.disabledCommands]
   };
@@ -775,10 +599,6 @@ function applyConfigPatch(base, patch, sourcePath) {
   if (disabledAgents) {
     next.disabledAgents = uniqueStrings([...next.disabledAgents, ...disabledAgents]);
   }
-  const disabledHooks = normalizeStringArray(patch.disabledHooks);
-  if (disabledHooks) {
-    next.disabledHooks = uniqueStrings([...next.disabledHooks, ...disabledHooks]);
-  }
   const disabledTools = normalizeStringArray(patch.disabledTools);
   if (disabledTools) {
     next.disabledTools = uniqueStrings([...next.disabledTools, ...disabledTools]);
@@ -842,9 +662,6 @@ function formatConfigSummary(resolution) {
   if (config.disabledAgents.length > 0) {
     disabledCounts.push(`${config.disabledAgents.length} agents`);
   }
-  if (config.disabledHooks.length > 0) {
-    disabledCounts.push(`${config.disabledHooks.length} hooks`);
-  }
   if (config.disabledTools.length > 0) {
     disabledCounts.push(`${config.disabledTools.length} tools`);
   }
@@ -860,6 +677,8 @@ function formatConfigSummary(resolution) {
 
 // src/hooks.ts
 import { existsSync as existsSync8 } from "node:fs";
+import { mkdir as mkdir5, writeFile as writeFile5 } from "node:fs/promises";
+import * as path8 from "node:path";
 
 // src/agents-md.ts
 import { existsSync as existsSync2 } from "node:fs";
@@ -1094,8 +913,66 @@ async function listOpenAgentMemoryTopics(args) {
   };
 }
 
+// src/workspace.ts
+import { existsSync as existsSync4 } from "node:fs";
+import { mkdir as mkdir3, readFile as readFile3, writeFile as writeFile3 } from "node:fs/promises";
+import * as path4 from "node:path";
+function isOpenAgentWorkspaceAvailable(session) {
+  return typeof session.workspacePath === "string" && session.workspacePath.length > 0;
+}
+function formatOpenAgentWorkspaceRequirement(action) {
+  return `${action} requires the session workspace because OpenAgent persists durable handoffs and notes under files/openagent/.`;
+}
+function requireOpenAgentWorkspacePath(session, action = "This action") {
+  const { workspacePath } = session;
+  if (typeof workspacePath !== "string" || workspacePath.length === 0) {
+    throw new Error(formatOpenAgentWorkspaceRequirement(action));
+  }
+  return workspacePath;
+}
+function normalizeOpenAgentRelativePath(rawPath) {
+  const normalized = rawPath.replace(/\\/g, "/").split("/").map((segment) => segment.trim()).filter((segment) => segment.length > 0 && segment !== ".");
+  if (normalized.length === 0 || normalized.some((segment) => segment === "..")) {
+    throw new Error("Workspace note path must stay inside the OpenAgent notes directory.");
+  }
+  const joined = normalized.join("/");
+  return path4.posix.extname(joined).length > 0 ? joined : `${joined}.md`;
+}
+function getOpenAgentWorkspacePaths(args) {
+  const { session, config } = args;
+  const workspacePath = requireOpenAgentWorkspacePath(session);
+  const notesRoot = path4.join(workspacePath, "files", ...config.workspace.notesDirectory.split("/"));
+  return {
+    workspacePath,
+    notesRoot,
+    routingRoot: path4.join(notesRoot, "routing"),
+    handoffsRoot: path4.join(notesRoot, "routing", "handoffs"),
+    routeStateFile: path4.join(notesRoot, "routing", "route-state.json")
+  };
+}
+async function writeOpenAgentWorkspaceNote(args) {
+  const { session, config, content } = args;
+  const fileMode = args.mode === "replace" ? "replace" : "append";
+  const relativePath = normalizeOpenAgentRelativePath(args.relativePath);
+  const paths = getOpenAgentWorkspacePaths({ session, config });
+  const fullPath = path4.join(paths.notesRoot, ...relativePath.split("/"));
+  await mkdir3(path4.dirname(fullPath), { recursive: true });
+  let nextContent = content;
+  if (fileMode === "append" && existsSync4(fullPath)) {
+    const current = await readFile3(fullPath, "utf8");
+    nextContent = `${current.trimEnd()}
+
+${content}`;
+  }
+  await writeFile3(fullPath, nextContent, "utf8");
+  return {
+    fullPath,
+    workspaceRelativePath: path4.relative(paths.workspacePath, fullPath),
+    nextContent
+  };
+}
+
 // src/continuous-improvement.ts
-init_workspace();
 function toBullets(lines) {
   return lines.map((line) => `- ${line}`).join(`
 `);
@@ -1341,6 +1218,7 @@ ${parts.join(`
 async function loadProjectContext(cwd) {
   const candidates = [];
   candidates.push({ relativePath: "AGENTS.md", maxChars: MAX_SINGLE_FILE_CHARS });
+  candidates.push({ relativePath: path6.join(".openagent", "last-session.md"), maxChars: 1500 });
   candidates.push({ relativePath: "README.md", maxChars: README_TRUNCATE_CHARS });
   const ruleFiles = await discoverRuleFiles(cwd);
   for (const rel of ruleFiles) {
@@ -1623,7 +1501,6 @@ function expandUltraworkPrompt() {
 }
 
 // src/session-history.ts
-init_workspace();
 import { existsSync as existsSync7 } from "node:fs";
 import { mkdir as mkdir4, readFile as readFile6, writeFile as writeFile4 } from "node:fs/promises";
 import * as path7 from "node:path";
@@ -1736,7 +1613,6 @@ async function recordSessionEnd(workspacePath, config, entry) {
 }
 
 // src/hooks.ts
-init_workspace();
 var SHELL_TOOL_NAMES = new Set(["bash", "powershell", "shell"]);
 var EDIT_LIKE_TOOL_NAMES = new Set([
   "edit",
@@ -1757,6 +1633,8 @@ var EDIT_TOOL_NAMES = new Set([
 ]);
 var READ_CONTEXT_TOOL_NAMES = new Set(["read", "view"]);
 var currentAgentName = null;
+var editedFilesThisSession = new Set;
+var phasesVisitedThisSession = new Set;
 function setCurrentAgentName(agentName) {
   currentAgentName = agentName;
 }
@@ -1868,7 +1746,7 @@ function createHooks(args) {
   const sessionStartTime = new Date().toISOString();
   return {
     onSessionStart: async (input) => {
-      const cwd = input.cwd || initialCwd;
+      const cwd = input.workingDirectory || initialCwd;
       const resolution = loadOpenAgentConfig(cwd);
       const promptContext = buildPromptContext(resolution, {
         forcePlan: Boolean(input.initialPrompt)
@@ -1880,7 +1758,7 @@ ${formatProjectContext(projectContext.files)}` : promptContext;
       return { additionalContext };
     },
     onUserPromptSubmitted: async (input) => {
-      const resolution = loadOpenAgentConfig(input.cwd || initialCwd);
+      const resolution = loadOpenAgentConfig(input.workingDirectory || initialCwd);
       const session = safeGetSession(getSession);
       if (session && currentAgentName) {
         try {
@@ -1901,7 +1779,7 @@ ${formatProjectContext(projectContext.files)}` : promptContext;
           additionalContext: buildPromptContext(resolution, { forcePlan: true })
         };
       }
-      const cwd = input.cwd || initialCwd;
+      const cwd = input.workingDirectory || initialCwd;
       const skills = await loadSkills(cwd);
       if (skills.length > 0) {
         const matched = matchSkillByTrigger(skills, input.prompt);
@@ -1915,8 +1793,20 @@ ${formatProjectContext(projectContext.files)}` : promptContext;
       return;
     },
     onPreToolUse: async (input) => {
-      const resolution = loadOpenAgentConfig(input.cwd || initialCwd);
+      const resolution = loadOpenAgentConfig(input.workingDirectory || initialCwd);
       recordToolCall(input.toolName);
+      if (EDIT_TOOL_NAMES.has(input.toolName)) {
+        const filePath = extractFilePath(input.toolArgs);
+        if (filePath) {
+          editedFilesThisSession.add(filePath);
+        }
+      }
+      if (input.toolName === "openagent_route_phase") {
+        const phase = isRecord3(input.toolArgs) && typeof input.toolArgs.phase === "string" ? input.toolArgs.phase : null;
+        if (phase) {
+          phasesVisitedThisSession.add(phase);
+        }
+      }
       if (SHELL_TOOL_NAMES.has(input.toolName)) {
         const command = extractShellCommand(input.toolArgs);
         if (command && resolution.config.guardrails.dangerousShellPatterns.some((pattern) => new RegExp(pattern, "i").test(command))) {
@@ -1951,7 +1841,7 @@ ${formatProjectContext(projectContext.files)}` : promptContext;
         const filePath = extractFilePath(input.toolArgs);
         if (filePath) {
           const ancestorAgentFiles = await loadAncestorAgentContext({
-            cwd: input.cwd || initialCwd,
+            cwd: input.workingDirectory || initialCwd,
             targetPath: filePath
           });
           if (ancestorAgentFiles.length > 0) {
@@ -1964,7 +1854,7 @@ ${formatProjectContext(projectContext.files)}` : promptContext;
       return;
     },
     onPostToolUse: async (input) => {
-      const resolution = loadOpenAgentConfig(input.cwd || initialCwd);
+      const resolution = loadOpenAgentConfig(input.workingDirectory || initialCwd);
       if (input.toolResult.resultType === "failure") {
         recordToolFailure();
       }
@@ -1996,7 +1886,7 @@ ${formatProjectContext(projectContext.files)}` : promptContext;
         const session = safeGetSession(getSession);
         const inputRecord = input;
         const workspacePath = typeof inputRecord.sessionWorkspacePath === "string" ? inputRecord.sessionWorkspacePath : typeof inputRecord.workspacePath === "string" ? inputRecord.workspacePath : null;
-        const cwd = typeof inputRecord.cwd === "string" ? inputRecord.cwd : initialCwd;
+        const cwd = typeof inputRecord.workingDirectory === "string" ? inputRecord.workingDirectory : initialCwd;
         const resolution = loadOpenAgentConfig(cwd);
         if (workspacePath && workspacePath.length > 0) {
           await recordSessionEnd(workspacePath, resolution.config, {
@@ -2005,9 +1895,35 @@ ${formatProjectContext(projectContext.files)}` : promptContext;
             reason: typeof input.reason === "string" ? input.reason : "unknown",
             summary,
             agentName: currentAgentName,
-            phasesVisited: [],
-            keyFiles: []
+            phasesVisited: [...phasesVisitedThisSession],
+            keyFiles: [...editedFilesThisSession]
           });
+        }
+        const lastSessionContent = [
+          `# Last Session`,
+          ``,
+          `**Ended:** ${new Date().toISOString()}`,
+          `**Agent:** ${currentAgentName ?? "none"}`,
+          `**Reason:** ${typeof input.reason === "string" ? input.reason : "unknown"}`,
+          phasesVisitedThisSession.size > 0 ? `**Phases:** ${[...phasesVisitedThisSession].join(", ")}` : `**Phases:** none`,
+          ``,
+          `## Summary`,
+          ``,
+          summary,
+          ``,
+          `## Files Touched`,
+          ``,
+          editedFilesThisSession.size > 0 ? [...editedFilesThisSession].map((f) => `- ${f}`).join(`
+`) : "_No files edited._"
+        ].join(`
+`);
+        const openagentDir = path8.join(cwd, ".openagent");
+        await mkdir5(openagentDir, { recursive: true });
+        await writeFile5(path8.join(openagentDir, "last-session.md"), lastSessionContent, "utf8");
+        const gitignorePath = path8.join(openagentDir, ".gitignore");
+        if (!existsSync8(gitignorePath)) {
+          await writeFile5(gitignorePath, `last-session.md
+`, "utf8");
         }
         await recordContinuousImprovementArtifact({
           cwd,
@@ -2038,7 +1954,7 @@ ${formatProjectContext(projectContext.files)}` : promptContext;
           userNotification: "OpenAgent stopped because the Copilot host marked the error as unrecoverable."
         };
       }
-      const resolution = loadOpenAgentConfig(input.cwd || initialCwd);
+      const resolution = loadOpenAgentConfig(input.workingDirectory || initialCwd);
       const recovery = classifyRecoveryError(input.error);
       const session = safeGetSession(getSession);
       const agentName = getCurrentAgentName();
@@ -2319,7 +2235,7 @@ function createCustomAgents(config) {
 
 // src/commands.ts
 import { existsSync as existsSync16 } from "node:fs";
-import * as path14 from "node:path";
+import * as path15 from "node:path";
 
 // src/bootstrap-confidence.ts
 function computeBootstrapConfidence(input) {
@@ -2359,17 +2275,16 @@ function computeBootstrapConfidence(input) {
 }
 
 // src/bootstrap-history.ts
-init_workspace();
 import { existsSync as existsSync9 } from "node:fs";
-import { mkdir as mkdir5, readFile as readFile7, writeFile as writeFile5 } from "node:fs/promises";
-import * as path8 from "node:path";
+import { mkdir as mkdir6, readFile as readFile7, writeFile as writeFile6 } from "node:fs/promises";
+import * as path9 from "node:path";
 var MAX_HISTORY_ENTRIES2 = 50;
 function isRecord4(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function getBootstrapHistoryPath(session, config) {
   const paths = getOpenAgentWorkspacePaths({ session, config });
-  return path8.join(paths.notesRoot, "bootstrap", "history.json");
+  return path9.join(paths.notesRoot, "bootstrap", "history.json");
 }
 function sanitizeEntry2(value) {
   if (!isRecord4(value)) {
@@ -2422,8 +2337,8 @@ async function appendBootstrapHistory(session, config, entry) {
     history.entries = history.entries.slice(-MAX_HISTORY_ENTRIES2);
   }
   history.updatedAt = new Date().toISOString();
-  await mkdir5(path8.dirname(historyPath), { recursive: true });
-  await writeFile5(historyPath, JSON.stringify(history, null, 2), "utf8");
+  await mkdir6(path9.dirname(historyPath), { recursive: true });
+  await writeFile6(historyPath, JSON.stringify(history, null, 2), "utf8");
   return history;
 }
 function formatBootstrapHistorySummary(history) {
@@ -2474,8 +2389,7 @@ ${content}`;
 
 // src/routing.ts
 import { existsSync as existsSync10 } from "node:fs";
-import { mkdir as mkdir6, readFile as readFile8, writeFile as writeFile6 } from "node:fs/promises";
-init_workspace();
+import { mkdir as mkdir7, readFile as readFile8, writeFile as writeFile7 } from "node:fs/promises";
 var OPENAGENT_PHASES = [
   "orchestrator",
   "planner",
@@ -2624,8 +2538,8 @@ async function readOpenAgentRouteState(args) {
 async function writeOpenAgentRouteState(args) {
   const { session, config, state } = args;
   const paths = getOpenAgentWorkspacePaths({ session, config });
-  await mkdir6(paths.routingRoot, { recursive: true });
-  await writeFile6(paths.routeStateFile, JSON.stringify(state, null, 2), "utf8");
+  await mkdir7(paths.routingRoot, { recursive: true });
+  await writeFile7(paths.routeStateFile, JSON.stringify(state, null, 2), "utf8");
 }
 async function syncPlanForRoute(args) {
   const { session, request, fromPhase, handoffWorkspacePath, targetAgent, targetMode } = args;
@@ -2663,7 +2577,7 @@ async function routeOpenAgentPhase(args) {
   ]);
   const fromAgent = inferAgentName(currentAgentResult.agent?.name);
   const fromPhase = existingState?.currentPhase ?? inferOpenAgentPhase(currentAgentResult.agent?.name);
-  const fromMode = isOpenAgentMode(currentModeResult.mode) ? currentModeResult.mode : PHASE_DEFINITIONS[fromPhase].mode;
+  const fromMode = isOpenAgentMode(currentModeResult) ? currentModeResult : PHASE_DEFINITIONS[fromPhase].mode;
   const targetDefinition = PHASE_DEFINITIONS[request.phase];
   const targetAgent = resolveTargetAgent(request.phase, request.agent);
   const targetMode = request.mode && request.mode !== "default" ? request.mode : targetDefinition.mode;
@@ -2708,7 +2622,7 @@ async function routeOpenAgentPhase(args) {
     agentName: targetAgent,
     config
   });
-  if (targetMode !== currentModeResult.mode) {
+  if (targetMode !== currentModeResult) {
     await session.rpc.mode.set({ mode: targetMode });
   }
   const nextState = {
@@ -2753,7 +2667,7 @@ async function formatOpenAgentRoutingStatus(args) {
   ]);
   const currentPhase = state?.currentPhase ?? inferOpenAgentPhase(currentAgentResult.agent?.name);
   const currentAgent = inferAgentName(currentAgentResult.agent?.name);
-  const currentMode = isOpenAgentMode(currentModeResult.mode) ? currentModeResult.mode : PHASE_DEFINITIONS[currentPhase].mode;
+  const currentMode = isOpenAgentMode(currentModeResult) ? currentModeResult : PHASE_DEFINITIONS[currentPhase].mode;
   const lines = [
     "OpenAgent routing",
     `phase: ${currentPhase}`,
@@ -2772,7 +2686,6 @@ async function formatOpenAgentRoutingStatus(args) {
 }
 
 // src/bootstrap.ts
-init_workspace();
 var OPENAGENT_BOOTSTRAP_PHASES = [
   "planner",
   "researcher",
@@ -3069,7 +2982,7 @@ async function bootstrapOpenAgentTask(args) {
 // src/command-loader.ts
 import { existsSync as existsSync11, readdirSync as readdirSync2, readFileSync as readFileSync2 } from "node:fs";
 import * as os4 from "node:os";
-import * as path9 from "node:path";
+import * as path10 from "node:path";
 var MAX_CUSTOM_COMMANDS = 50;
 function parseCommandFrontmatter(raw) {
   const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
@@ -3099,13 +3012,13 @@ function scanCommandDirectory(dir) {
     if (!existsSync11(dir)) {
       return [];
     }
-    return readdirSync2(dir, { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.endsWith(".md")).map((entry) => path9.join(dir, entry.name));
+    return readdirSync2(dir, { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.endsWith(".md")).map((entry) => path10.join(dir, entry.name));
   } catch {
     return [];
   }
 }
 function pushUniquePath(output, value) {
-  const resolved = path9.resolve(value);
+  const resolved = path10.resolve(value);
   if (!output.includes(resolved)) {
     output.push(resolved);
   }
@@ -3116,20 +3029,20 @@ function getDefaultUserCommandDirectories(args) {
   const homedir5 = args?.homedir ?? os4.homedir();
   const directories = [];
   if (platform === "win32") {
-    const appData = env.APPDATA?.trim() || path9.join(homedir5, "AppData", "Roaming");
-    pushUniquePath(directories, path9.join(appData, "openagent", "commands"));
-    pushUniquePath(directories, path9.join(homedir5, ".config", "openagent", "commands"));
+    const appData = env.APPDATA?.trim() || path10.join(homedir5, "AppData", "Roaming");
+    pushUniquePath(directories, path10.join(appData, "openagent", "commands"));
+    pushUniquePath(directories, path10.join(homedir5, ".config", "openagent", "commands"));
     return directories;
   }
   if (platform === "darwin") {
-    pushUniquePath(directories, path9.join(homedir5, "Library", "Application Support", "openagent", "commands"));
+    pushUniquePath(directories, path10.join(homedir5, "Library", "Application Support", "openagent", "commands"));
   }
-  const xdgConfigHome = env.XDG_CONFIG_HOME?.trim() ? path9.resolve(env.XDG_CONFIG_HOME.trim()) : path9.join(homedir5, ".config");
-  pushUniquePath(directories, path9.join(xdgConfigHome, "openagent", "commands"));
+  const xdgConfigHome = env.XDG_CONFIG_HOME?.trim() ? path10.resolve(env.XDG_CONFIG_HOME.trim()) : path10.join(homedir5, ".config");
+  pushUniquePath(directories, path10.join(xdgConfigHome, "openagent", "commands"));
   return directories;
 }
 function discoverCommandFiles(cwd) {
-  const projectDir = path9.join(cwd, ".openagent", "commands");
+  const projectDir = path10.join(cwd, ".openagent", "commands");
   return [
     ...scanCommandDirectory(projectDir),
     ...getDefaultUserCommandDirectories().flatMap((dir) => scanCommandDirectory(dir))
@@ -3184,7 +3097,7 @@ import { spawnSync } from "node:child_process";
 // src/bundled-deps.ts
 import { existsSync as existsSync12, readFileSync as readFileSync3 } from "node:fs";
 import { createRequire } from "node:module";
-import * as path10 from "node:path";
+import * as path11 from "node:path";
 var require2 = createRequire(import.meta.url);
 function tryResolve(value) {
   try {
@@ -3199,16 +3112,16 @@ function resolveBundledAstGrepBinary() {
   if (!packageJsonPath) {
     return null;
   }
-  const packageRoot = path10.dirname(packageJsonPath);
+  const packageRoot = path11.dirname(packageJsonPath);
   const directCandidates = process.platform === "win32" ? [
-    path10.join(packageRoot, "ast-grep.exe"),
-    path10.join(packageRoot, "sg.exe"),
-    path10.join(packageRoot, "ast-grep"),
-    path10.join(packageRoot, "sg")
-  ] : [path10.join(packageRoot, "ast-grep"), path10.join(packageRoot, "sg")];
+    path11.join(packageRoot, "ast-grep.exe"),
+    path11.join(packageRoot, "sg.exe"),
+    path11.join(packageRoot, "ast-grep"),
+    path11.join(packageRoot, "sg")
+  ] : [path11.join(packageRoot, "ast-grep"), path11.join(packageRoot, "sg")];
   const directBinary = directCandidates.find((candidate) => existsSync12(candidate)) ?? null;
   if (directBinary) {
-    if (path10.extname(directBinary).toLowerCase() === ".exe") {
+    if (path11.extname(directBinary).toLowerCase() === ".exe") {
       return directBinary;
     }
     try {
@@ -3238,26 +3151,25 @@ function resolveBundledAstGrepBinary() {
   if (!platformPackage) {
     return directBinary;
   }
-  const platformRoot = path10.dirname(platformPackage);
+  const platformRoot = path11.dirname(platformPackage);
   const binaryName = process.platform === "win32" ? "ast-grep.exe" : "ast-grep";
-  return path10.join(platformRoot, binaryName);
+  return path11.join(platformRoot, binaryName);
 }
 function resolveBundledCopilotCliPath() {
   const sdkEntry = tryResolve(() => require2.resolve("@github/copilot-sdk"));
   if (!sdkEntry) {
     return null;
   }
-  const sdkPackageRoot = path10.resolve(path10.dirname(sdkEntry), "..", "..");
-  const copilotPackageRoot = path10.resolve(sdkPackageRoot, "../copilot");
+  const sdkPackageRoot = path11.resolve(path11.dirname(sdkEntry), "..", "..");
+  const copilotPackageRoot = path11.resolve(sdkPackageRoot, "../copilot");
   const candidates = [
-    path10.join(copilotPackageRoot, "npm-loader.js"),
-    path10.join(copilotPackageRoot, "index.js")
+    path11.join(copilotPackageRoot, "npm-loader.js"),
+    path11.join(copilotPackageRoot, "index.js")
   ];
   return candidates.find((candidate) => existsSync12(candidate)) ?? null;
 }
 
 // src/doctor.ts
-init_workspace();
 function getBinaryLookupCommand(platform = process.platform) {
   return platform === "win32" ? "where.exe" : "which";
 }
@@ -3330,7 +3242,7 @@ async function runOpenAgentDoctor(args) {
     "",
     `cwd: ${cwd}`,
     `workspace path: ${session.workspacePath ?? "disabled"}`,
-    `current mode: ${mode.mode}`,
+    `current mode: ${mode}`,
     `current model: ${model.modelId ?? "host default"}`,
     `current agent: ${agent.agent?.name ?? "host default"}`,
     `plan path: ${plan.path ?? "not available"}`,
@@ -3367,7 +3279,7 @@ async function runOpenAgentDoctor(args) {
     summary: missingBinaryNames.length > 0 ? `Doctor found missing local binaries: ${missingBinaryNames.join(", ")}. Promote stable setup guidance if these tools are routinely expected in this repo.` : "Doctor completed without missing binary checks. If doctor output reveals recurring config or workflow confusion, promote that guidance into rules or AGENTS.",
     evidence: [
       `Report path: ${reportWorkspacePath ?? "not written to workspace"}`,
-      `Current mode: ${mode.mode}`,
+      `Current mode: ${mode}`,
       `Current agent: ${agent.agent?.name ?? "host default"}`
     ],
     recommendations: [
@@ -3386,10 +3298,9 @@ async function runOpenAgentDoctor(args) {
 }
 
 // src/handoff.ts
-init_workspace();
 import { existsSync as existsSync13 } from "node:fs";
 import { readFile as readFile9 } from "node:fs/promises";
-import * as path11 from "node:path";
+import * as path12 from "node:path";
 function isRecord6(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -3464,7 +3375,7 @@ async function writeOpenAgentHandoffArtifact(args) {
   ]);
   const fromAgent = args.fromAgent ?? routeState?.currentAgent ?? agentResult.agent?.name ?? "conductor";
   const fromPhase = args.fromPhase ?? routeState?.currentPhase ?? inferOpenAgentPhase(fromAgent);
-  const fromMode = args.fromMode ?? routeState?.currentMode ?? modeResult.mode ?? "interactive";
+  const fromMode = args.fromMode ?? routeState?.currentMode ?? modeResult ?? "interactive";
   const latestHandoffPath = args.latestHandoffPath ?? routeState?.latestHandoffPath ?? null;
   const toPhase = inferOpenAgentPhase(args.targetAgent);
   const artifact = {
@@ -3512,10 +3423,10 @@ async function readOpenAgentHandoffArtifact(args) {
   });
   const candidates = [
     args.artifactPath,
-    path11.resolve(args.cwd, args.artifactPath),
-    path11.resolve(workspacePath, args.artifactPath),
-    path11.resolve(workspacePath, "files", args.artifactPath),
-    path11.resolve(workspacePaths.notesRoot, args.artifactPath)
+    path12.resolve(args.cwd, args.artifactPath),
+    path12.resolve(workspacePath, args.artifactPath),
+    path12.resolve(workspacePath, "files", args.artifactPath),
+    path12.resolve(workspacePaths.notesRoot, args.artifactPath)
   ];
   const resolvedPath = candidates.find((candidate) => existsSync13(candidate));
   if (!resolvedPath) {
@@ -3530,15 +3441,14 @@ async function readOpenAgentHandoffArtifact(args) {
 }
 
 // src/loop-state.ts
-init_workspace();
 import { existsSync as existsSync14 } from "node:fs";
-import { mkdir as mkdir7, readFile as readFile10, rm, writeFile as writeFile7 } from "node:fs/promises";
-import * as path12 from "node:path";
+import { mkdir as mkdir8, readFile as readFile10, rm, writeFile as writeFile8 } from "node:fs/promises";
+import * as path13 from "node:path";
 var OPENAGENT_LOOP_DONE_SENTINEL = "<promise>DONE</promise>";
 function getLoopStateFile(session, config) {
   requireOpenAgentWorkspacePath(session, "OpenAgent loop");
   const paths = getOpenAgentWorkspacePaths({ session, config });
-  return path12.join(paths.notesRoot, "loops", "state.json");
+  return path13.join(paths.notesRoot, "loops", "state.json");
 }
 function buildOpenAgentLoopPrompt(args) {
   return [
@@ -3567,8 +3477,8 @@ async function readOpenAgentLoopState(args) {
 }
 async function writeOpenAgentLoopState(args) {
   const filePath = getLoopStateFile(args.session, args.config);
-  await mkdir7(path12.dirname(filePath), { recursive: true });
-  await writeFile7(filePath, JSON.stringify(args.state, null, 2), "utf8");
+  await mkdir8(path13.dirname(filePath), { recursive: true });
+  await writeFile8(filePath, JSON.stringify(args.state, null, 2), "utf8");
 }
 async function clearOpenAgentLoopState(args) {
   const filePath = getLoopStateFile(args.session, args.config);
@@ -3582,11 +3492,12 @@ async function clearOpenAgentLoopState(args) {
 import { spawnSync as spawnSync2 } from "node:child_process";
 import { existsSync as existsSync15 } from "node:fs";
 import { readFile as readFile11 } from "node:fs/promises";
-import * as path13 from "node:path";
+import * as path14 from "node:path";
 
 // src/copilot-setup.ts
 import {
   CopilotClient,
+  RuntimeConnection,
   approveAll
 } from "@github/copilot-sdk";
 function getBundledCopilotCliPathOrThrow() {
@@ -3598,7 +3509,7 @@ function getBundledCopilotCliPathOrThrow() {
 }
 function createBundledCopilotClient() {
   return new CopilotClient({
-    cliPath: getBundledCopilotCliPathOrThrow(),
+    connection: RuntimeConnection.forStdio({ path: getBundledCopilotCliPathOrThrow() }),
     useLoggedInUser: true,
     logLevel: "error",
     env: {
@@ -3679,7 +3590,7 @@ var BASENAME_MIME_TYPES = new Map([
   ["readme", "text/plain"]
 ]);
 function resolveTargetPath(cwd, rawPath) {
-  const absolute = path13.isAbsolute(rawPath) ? rawPath : path13.resolve(cwd, rawPath);
+  const absolute = path14.isAbsolute(rawPath) ? rawPath : path14.resolve(cwd, rawPath);
   if (!existsSync15(absolute)) {
     throw new Error(`look_at target "${rawPath}" does not exist.`);
   }
@@ -3701,12 +3612,12 @@ function runCommand(name, args) {
   return stdout.length > 0 ? stdout : null;
 }
 function inferMimeTypeFromPath(filePath) {
-  const extension = path13.extname(filePath).toLowerCase();
+  const extension = path14.extname(filePath).toLowerCase();
   const extensionMimeType = EXTENSION_MIME_TYPES.get(extension);
   if (extensionMimeType) {
     return extensionMimeType;
   }
-  return BASENAME_MIME_TYPES.get(path13.basename(filePath).toLowerCase()) ?? null;
+  return BASENAME_MIME_TYPES.get(path14.basename(filePath).toLowerCase()) ?? null;
 }
 function detectMimeType(filePath) {
   return inferMimeTypeFromPath(filePath) ?? runCommand("file", ["-b", "--mime-type", filePath]) ?? "application/octet-stream";
@@ -3798,7 +3709,7 @@ function buildOpenAgentLookAtPrompt(args) {
   return [
     args.prompt?.trim().length ? `Inspect the attached file and answer this request: ${args.prompt.trim()}` : "Inspect the attached file. Extract the important visible or embedded text, describe the content concisely, and call out anything risky, surprising, or relevant to the current task.",
     "",
-    `Attached file: ${path13.basename(args.filePath)}`,
+    `Attached file: ${path14.basename(args.filePath)}`,
     "Prefer concrete extraction over vague description."
   ].join(`
 `);
@@ -3866,7 +3777,6 @@ async function runOpenAgentLookAt(args) {
 }
 
 // src/plan-review.ts
-init_workspace();
 function normalizeWhitespace2(value) {
   return value.replace(/\s+/g, " ").trim();
 }
@@ -3989,7 +3899,6 @@ async function startPlanReviewWorkflow(args) {
 }
 
 // src/review-workflow.ts
-init_workspace();
 function normalizeWhitespace3(value) {
   return value.replace(/\s+/g, " ").trim();
 }
@@ -4131,7 +4040,6 @@ async function startOpenAgentReviewWorkflow(args) {
 }
 
 // src/compaction.ts
-init_workspace();
 var OPENAGENT_PREEMPTIVE_COMPACTION_THRESHOLD = 0.7;
 var OPENAGENT_BUFFER_EXHAUSTION_THRESHOLD = 0.9;
 var compactionState = {
@@ -4244,7 +4152,6 @@ function formatOpenAgentCompactionStatus() {
 }
 
 // src/commands.ts
-init_workspace();
 function parseInitDeepArgs(rawArgs) {
   const args = rawArgs.trim().split(/\s+/).filter((part) => part.length > 0);
   let force = false;
@@ -4465,7 +4372,7 @@ function createCommands(args) {
         await session.log([
           "OpenAgent status",
           formatConfigSummary(resolution2),
-          `mode: ${mode.mode}`,
+          `mode: ${mode}`,
           `model: ${model.modelId ?? "host default"}`,
           `agent: ${agent.agent?.name ?? "host default"}`,
           `workspace path: ${session.workspacePath ?? "disabled"}`,
@@ -4531,7 +4438,7 @@ function createCommands(args) {
           return;
         }
         const cwd2 = process.cwd() || initialCwd;
-        const filePath = path14.isAbsolute(parsedArgs.file) ? parsedArgs.file : path14.resolve(cwd2, parsedArgs.file);
+        const filePath = path15.isAbsolute(parsedArgs.file) ? parsedArgs.file : path15.resolve(cwd2, parsedArgs.file);
         if (!existsSync16(filePath)) {
           await session.log(`OpenAgent could not find "${parsedArgs.file}".`, {
             level: "warning"
@@ -4772,7 +4679,7 @@ function createCommands(args) {
           nextStep: description || `Continue the current work as ${agentName}.`,
           fromAgent,
           fromPhase,
-          fromMode: currentModeResult.mode === "interactive" || currentModeResult.mode === "plan" || currentModeResult.mode === "autopilot" ? currentModeResult.mode : "interactive",
+          fromMode: currentModeResult === "interactive" || currentModeResult === "plan" || currentModeResult === "autopilot" ? currentModeResult : "interactive",
           refs: [result.handoffWorkspacePath],
           latestHandoffPath: result.handoffWorkspacePath
         });
@@ -4875,28 +4782,30 @@ function createCommands(args) {
 
 // src/permissions.ts
 import * as os5 from "node:os";
-import * as path15 from "node:path";
+import * as path16 from "node:path";
 function deny(message) {
   return {
-    kind: "denied-by-permission-request-hook",
-    message,
-    interrupt: true
+    kind: "reject",
+    feedback: message
   };
 }
 function approve() {
   return { kind: "approved" };
 }
+function defer() {
+  return { kind: "no-result" };
+}
 function isInsideRoot(candidatePath, rootPath) {
-  const resolvedRoot = path15.resolve(rootPath);
-  const resolvedCandidate = path15.resolve(candidatePath);
-  const relative4 = path15.relative(resolvedRoot, resolvedCandidate);
-  return relative4 === "" || !relative4.startsWith("..") && !path15.isAbsolute(relative4);
+  const resolvedRoot = path16.resolve(rootPath);
+  const resolvedCandidate = path16.resolve(candidatePath);
+  const relative4 = path16.relative(resolvedRoot, resolvedCandidate);
+  return relative4 === "" || !relative4.startsWith("..") && !path16.isAbsolute(relative4);
 }
 function collectAllowedRoots(initialCwd) {
   const cwd = process.cwd() || initialCwd;
   return [
-    path15.resolve(cwd),
-    path15.join(os5.homedir(), ".copilot", "session-state")
+    path16.resolve(cwd),
+    path16.join(os5.homedir(), ".copilot", "session-state")
   ];
 }
 function areAllPathsAllowed(rawPaths, allowedRoots, initialCwd) {
@@ -4907,7 +4816,7 @@ function areAllPathsAllowed(rawPaths, allowedRoots, initialCwd) {
     if (typeof entry !== "string" || entry.trim().length === 0) {
       return true;
     }
-    const resolved = path15.resolve(process.cwd() || initialCwd, entry);
+    const resolved = path16.resolve(process.cwd() || initialCwd, entry);
     return allowedRoots.some((root) => isInsideRoot(resolved, root));
   });
 }
@@ -4948,16 +4857,16 @@ function createPermissionHandler(args) {
       case "read": {
         const targetPath = getStringField(request, "path");
         if (!targetPath) {
-          return deny("OpenAgent could not determine the requested read path.");
+          return defer();
         }
-        return allowedRoots.some((root) => isInsideRoot(targetPath, root)) ? approve() : deny("OpenAgent only auto-approves reads inside the repo or session workspace.");
+        return allowedRoots.some((root) => isInsideRoot(targetPath, root)) ? approve() : defer();
       }
       case "write": {
         const fileName = getStringField(request, "fileName");
         if (!fileName) {
-          return deny("OpenAgent could not determine the requested write path.");
+          return defer();
         }
-        return allowedRoots.some((root) => isInsideRoot(fileName, root)) ? approve() : deny("OpenAgent only auto-approves writes inside the repo or session workspace.");
+        return allowedRoots.some((root) => isInsideRoot(fileName, root)) ? approve() : defer();
       }
       case "shell": {
         const shellRequest = request;
@@ -4966,23 +4875,23 @@ function createPermissionHandler(args) {
           return deny("OpenAgent blocked a shell command that matched its dangerous-command policy.");
         }
         if (hasPossibleUrls(shellRequest.possibleUrls)) {
-          return deny("OpenAgent does not auto-approve shell commands that may access external URLs.");
+          return defer();
         }
         if (areAllPathsAllowed(shellRequest.possiblePaths, allowedRoots, initialCwd) || hasReadOnlyCommands(shellRequest.commands)) {
           return approve();
         }
-        return deny("OpenAgent only auto-approves repo-local shell commands or commands classified as read-only.");
+        return defer();
       }
       case "mcp": {
         const mcpRequest = request;
-        return mcpRequest.readOnly === true ? approve() : deny("OpenAgent only auto-approves read-only MCP tool calls.");
+        return mcpRequest.readOnly === true ? approve() : defer();
       }
       case "custom-tool":
         return approve();
       case "url":
-        return deny("OpenAgent does not auto-approve direct URL access.");
+        return defer();
       default:
-        return deny(`OpenAgent does not auto-approve ${request.kind} permissions.`);
+        return defer();
     }
   };
 }
@@ -5248,13 +5157,13 @@ function inferCategoryFromObjective(objective) {
 
 // src/ast-grep.ts
 import { spawnSync as spawnSync3 } from "node:child_process";
-import * as path16 from "node:path";
+import * as path17 from "node:path";
 var DEFAULT_AST_GREP_BINARY = "ast-grep";
 function resolvePaths(cwd, pathsToSearch) {
   if (!pathsToSearch || pathsToSearch.length === 0) {
     return [cwd];
   }
-  return pathsToSearch.map((target) => path16.isAbsolute(target) ? target : path16.resolve(cwd, target));
+  return pathsToSearch.map((target) => path17.isAbsolute(target) ? target : path17.resolve(cwd, target));
 }
 function runAstGrep(args) {
   const binary = args.binary?.trim() || resolveBundledAstGrepBinary() || DEFAULT_AST_GREP_BINARY;
@@ -5321,8 +5230,8 @@ function runOpenAgentAstReplace(args) {
 
 // src/lsp-lite.ts
 import { existsSync as existsSync17 } from "node:fs";
-import { readFile as readFile12, writeFile as writeFile8 } from "node:fs/promises";
-import * as path17 from "node:path";
+import { readFile as readFile12, writeFile as writeFile9 } from "node:fs/promises";
+import * as path18 from "node:path";
 import ts from "typescript";
 var SUPPORTED_EXTENSIONS = new Set([
   ".ts",
@@ -5335,34 +5244,34 @@ var SUPPORTED_EXTENSIONS = new Set([
   ".cjs"
 ]);
 function normalizePath(filePath) {
-  return path17.resolve(filePath);
+  return path18.resolve(filePath);
 }
 function isPathInsideRoot(root, targetPath) {
-  const relative5 = path17.relative(root, targetPath);
-  return relative5 === "" || !relative5.startsWith("..") && !path17.isAbsolute(relative5);
+  const relative5 = path18.relative(root, targetPath);
+  return relative5 === "" || !relative5.startsWith("..") && !path18.isAbsolute(relative5);
 }
 function ensureSupportedFile(filePath) {
   const absolute = normalizePath(filePath);
   if (!existsSync17(absolute)) {
     throw new Error(`LSP-lite target "${filePath}" does not exist.`);
   }
-  if (!SUPPORTED_EXTENSIONS.has(path17.extname(absolute))) {
+  if (!SUPPORTED_EXTENSIONS.has(path18.extname(absolute))) {
     throw new Error(`LSP-lite only supports TypeScript and JavaScript files. Unsupported target: ${filePath}`);
   }
   return absolute;
 }
 function resolveTargetPath2(cwd, rawPath) {
-  return ensureSupportedFile(path17.isAbsolute(rawPath) ? rawPath : path17.resolve(cwd, rawPath));
+  return ensureSupportedFile(path18.isAbsolute(rawPath) ? rawPath : path18.resolve(cwd, rawPath));
 }
 function resolveProjectFiles(cwd, targetFile) {
-  const configPath = ts.findConfigFile(path17.dirname(targetFile), ts.sys.fileExists);
+  const configPath = ts.findConfigFile(path18.dirname(targetFile), ts.sys.fileExists);
   if (configPath) {
     const readResult = ts.readConfigFile(configPath, ts.sys.readFile);
     if (readResult.error) {
       throw new Error(ts.flattenDiagnosticMessageText(readResult.error.messageText, `
 `));
     }
-    const parsed = ts.parseJsonConfigFileContent(readResult.config, ts.sys, path17.dirname(configPath), undefined, configPath);
+    const parsed = ts.parseJsonConfigFileContent(readResult.config, ts.sys, path18.dirname(configPath), undefined, configPath);
     if (parsed.errors.length > 0) {
       throw new Error(parsed.errors.map((error) => ts.flattenDiagnosticMessageText(error.messageText, `
 `)).join(`
@@ -5592,7 +5501,7 @@ async function runOpenAgentLspRename(args) {
     for (const [filePath, locationsForFile] of editsByFile) {
       const currentContent = await readFile12(filePath, "utf8");
       const nextContent = applyTextChanges(currentContent, locationsForFile, args.newName);
-      await writeFile8(filePath, nextContent, "utf8");
+      await writeFile9(filePath, nextContent, "utf8");
     }
   }
   return {
@@ -5607,13 +5516,13 @@ async function runOpenAgentLspRename(args) {
 
 // src/safe-edit.ts
 import { createHash } from "node:crypto";
-import { readFile as readFile13, writeFile as writeFile9 } from "node:fs/promises";
-import * as path18 from "node:path";
+import { readFile as readFile13, writeFile as writeFile10 } from "node:fs/promises";
+import * as path19 from "node:path";
 function isInsideRoot2(candidatePath, rootPath) {
-  const resolvedRoot = path18.resolve(rootPath);
-  const resolvedCandidate = path18.resolve(candidatePath);
-  const relative6 = path18.relative(resolvedRoot, resolvedCandidate);
-  return relative6 === "" || !relative6.startsWith("..") && !path18.isAbsolute(relative6);
+  const resolvedRoot = path19.resolve(rootPath);
+  const resolvedCandidate = path19.resolve(candidatePath);
+  const relative6 = path19.relative(resolvedRoot, resolvedCandidate);
+  return relative6 === "" || !relative6.startsWith("..") && !path19.isAbsolute(relative6);
 }
 function countOccurrences(haystack, needle) {
   if (needle.length === 0) {
@@ -5634,10 +5543,10 @@ function hashSafeEditLine(line) {
   return createHash("sha256").update(line, "utf8").digest("hex").slice(0, 16);
 }
 async function applyOpenAgentSafeEdit(args) {
-  const resolvedFilePath = path18.resolve(args.cwd, args.file);
-  const allowedRoots = [path18.resolve(args.cwd)];
+  const resolvedFilePath = path19.resolve(args.cwd, args.file);
+  const allowedRoots = [path19.resolve(args.cwd)];
   if (args.workspacePath) {
-    allowedRoots.push(path18.resolve(args.workspacePath));
+    allowedRoots.push(path19.resolve(args.workspacePath));
   }
   if (!allowedRoots.some((root) => isInsideRoot2(resolvedFilePath, root))) {
     throw new Error("openagent_safe_edit only allows files inside the repo or session workspace.");
@@ -5661,7 +5570,7 @@ async function applyOpenAgentSafeEdit(args) {
     throw new Error(`openagent_safe_edit refused to edit because the target line hash drifted (expected ${args.lineHash}, found ${currentHash}).`);
   }
   const nextContent = currentContent.replace(args.oldBlock, args.newBlock);
-  await writeFile9(resolvedFilePath, nextContent, "utf8");
+  await writeFile10(resolvedFilePath, nextContent, "utf8");
   return {
     filePath: resolvedFilePath,
     lineNumber,
@@ -5670,19 +5579,18 @@ async function applyOpenAgentSafeEdit(args) {
 }
 
 // src/tasks.ts
-init_workspace();
 import { existsSync as existsSync18 } from "node:fs";
-import { mkdir as mkdir8, readFile as readFile14, writeFile as writeFile10, unlink } from "node:fs/promises";
-import * as path19 from "node:path";
+import { mkdir as mkdir9, readFile as readFile14, writeFile as writeFile11, unlink } from "node:fs/promises";
+import * as path20 from "node:path";
 function getTasksRoot(session, config) {
   const paths = getOpenAgentWorkspacePaths({ session, config });
-  return path19.join(paths.notesRoot, "tasks");
+  return path20.join(paths.notesRoot, "tasks");
 }
 function getTaskFilePath(tasksRoot, taskId) {
-  return path19.join(tasksRoot, `${taskId}.json`);
+  return path20.join(tasksRoot, `${taskId}.json`);
 }
 function getIndexFilePath(tasksRoot) {
-  return path19.join(tasksRoot, "index.json");
+  return path20.join(tasksRoot, "index.json");
 }
 async function readIndex(tasksRoot) {
   const indexPath = getIndexFilePath(tasksRoot);
@@ -5697,8 +5605,8 @@ async function readIndex(tasksRoot) {
   return { taskIds: [] };
 }
 async function writeIndex(tasksRoot, index) {
-  await mkdir8(tasksRoot, { recursive: true });
-  await writeFile10(getIndexFilePath(tasksRoot), JSON.stringify(index, null, 2), "utf8");
+  await mkdir9(tasksRoot, { recursive: true });
+  await writeFile11(getIndexFilePath(tasksRoot), JSON.stringify(index, null, 2), "utf8");
 }
 async function readOpenAgentTask(session, config, taskId) {
   const tasksRoot = getTasksRoot(session, config);
@@ -5711,9 +5619,9 @@ async function readOpenAgentTask(session, config, taskId) {
 }
 async function writeOpenAgentTask(session, config, task) {
   const tasksRoot = getTasksRoot(session, config);
-  await mkdir8(tasksRoot, { recursive: true });
+  await mkdir9(tasksRoot, { recursive: true });
   const filePath = getTaskFilePath(tasksRoot, task.id);
-  await writeFile10(filePath, JSON.stringify(task, null, 2), "utf8");
+  await writeFile11(filePath, JSON.stringify(task, null, 2), "utf8");
   const index = await readIndex(tasksRoot);
   if (!index.taskIds.includes(task.id)) {
     index.taskIds.push(task.id);
@@ -6135,9 +6043,152 @@ function createTaskTools(args) {
   return [taskCreateTool, taskListTool, taskGetTool, taskUpdateTool];
 }
 
+// src/fleet.ts
+import { existsSync as existsSync19 } from "node:fs";
+import { mkdir as mkdir10, readFile as readFile15, unlink as unlink2, writeFile as writeFile12 } from "node:fs/promises";
+import * as path21 from "node:path";
+function getFleetFilePath(session, config) {
+  const paths = getOpenAgentWorkspacePaths({ session, config });
+  return path21.join(paths.routingRoot, "fleet.json");
+}
+async function writeFleetWave(args) {
+  const { session, config, objective, tasks } = args;
+  const existingLog = await readFleetLog({ session, config });
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const waveNumber = existingLog ? existingLog.waves.length + 1 : 1;
+  const waveId = `fleet-${timestamp}-wave-${waveNumber}`;
+  const now = new Date().toISOString();
+  const wave = {
+    id: waveId,
+    wave: waveNumber,
+    objective,
+    createdAt: now,
+    tasks: tasks.map((t, i) => ({
+      id: `${waveId}-task-${i + 1}`,
+      title: t.title,
+      description: t.description,
+      scope: t.scope,
+      status: "dispatched",
+      dispatchedAt: now
+    }))
+  };
+  const log = existingLog ? {
+    ...existingLog,
+    objective,
+    updatedAt: now,
+    waves: [...existingLog.waves, wave]
+  } : {
+    id: `fleet-${timestamp}`,
+    objective,
+    createdAt: now,
+    updatedAt: now,
+    waves: [wave]
+  };
+  const paths = getOpenAgentWorkspacePaths({ session, config });
+  await mkdir10(paths.routingRoot, { recursive: true });
+  await writeFile12(getFleetFilePath(session, config), JSON.stringify(log, null, 2), "utf8");
+  return { log, wave };
+}
+async function readFleetLog(args) {
+  const { session, config } = args;
+  const filePath = getFleetFilePath(session, config);
+  if (!existsSync19(filePath)) {
+    return null;
+  }
+  try {
+    const content = await readFile15(filePath, "utf8");
+    return JSON.parse(content);
+  } catch {
+    return null;
+  }
+}
+async function updateFleetTaskStatus(args) {
+  const { session, config, taskId, status, notes } = args;
+  const log = await readFleetLog({ session, config });
+  if (!log) {
+    return { found: false };
+  }
+  let found = false;
+  for (const wave of log.waves) {
+    for (const task of wave.tasks) {
+      if (task.id === taskId) {
+        task.status = status;
+        if (notes !== undefined) {
+          task.notes = notes;
+        }
+        if (status === "completed" || status === "failed") {
+          task.completedAt = new Date().toISOString();
+        }
+        found = true;
+        break;
+      }
+    }
+    if (found)
+      break;
+  }
+  if (!found) {
+    return { found: false };
+  }
+  log.updatedAt = new Date().toISOString();
+  const paths = getOpenAgentWorkspacePaths({ session, config });
+  await mkdir10(paths.routingRoot, { recursive: true });
+  await writeFile12(getFleetFilePath(session, config), JSON.stringify(log, null, 2), "utf8");
+  return { found: true };
+}
+function formatFleetDispatchInstructions(log, wave) {
+  const { tasks } = wave;
+  const plural = tasks.length === 1 ? "task" : "tasks";
+  const header = [
+    `Fleet ${log.id} registered.`,
+    `Objective: ${wave.objective}`,
+    `Wave: ${wave.wave} — ${tasks.length} ${plural}`,
+    "",
+    tasks.length === 1 ? `Dispatch the following task by calling the \`agent\` tool:` : `Dispatch ALL ${tasks.length} tasks simultaneously in a **single response** by calling the \`agent\` tool once per task:`,
+    ""
+  ].join(`
+`);
+  const taskBlocks = tasks.map((task, i) => {
+    const safeName = task.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+    const prompt = [
+      `Fleet ${log.id}, wave ${wave.wave}, task ${i + 1} of ${tasks.length}.`,
+      ``,
+      `Task: ${task.title}`,
+      `Objective: ${task.description}`,
+      task.scope ? `Scope (files/packages to modify): ${task.scope}` : "",
+      ``,
+      `Complete this task fully. Return a single final report containing:`,
+      `1. Files changed (with one-line reason each)`,
+      `2. Build/test results`,
+      `3. Any blockers or follow-up needed`,
+      ``,
+      `IMPORTANT: After sending your report, stop. Do not continue working, do not ask follow-up questions, do not wait for further input. This is a terminal one-shot task.`
+    ].filter((l) => l !== undefined).join(`
+`);
+    return [
+      `--- Task ${i + 1} of ${tasks.length}: ${task.title} ---`,
+      `agent_type: builder`,
+      `name: ${safeName}`,
+      `description: ${task.title.slice(0, 60)}`,
+      `mode: background`,
+      `prompt:`,
+      prompt.split(`
+`).map((l) => `  ${l}`).join(`
+`)
+    ].join(`
+`);
+  }).join(`
+
+`);
+  const footer = [
+    "",
+    tasks.length > 1 ? "Call the `agent` tool for all tasks above in one response to dispatch them in parallel." : "Call the `agent` tool with the parameters above.",
+    "After all agents complete, read and verify each output before proceeding to the next wave or review."
+  ].join(`
+`);
+  return header + taskBlocks + footer;
+}
+
 // src/tools.ts
-init_fleet();
-init_workspace();
 function isRecord8(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -6388,7 +6439,7 @@ function createTools(args) {
       return createSuccessResult2([
         "OpenAgent runtime status",
         formatConfigSummary(resolution2),
-        `mode: ${mode.mode}`,
+        `mode: ${mode}`,
         `model: ${model.modelId ?? "host default"}`,
         `agent: ${agent.agent?.name ?? "host default"}`,
         `workspace path: ${session.workspacePath ?? "disabled"}`,
@@ -6659,26 +6710,99 @@ function createTools(args) {
       }
       const parsedArgs = parseFleetArgs(args2);
       const resolution2 = loadOpenAgentConfig(resolveCwd2(initialCwd));
-      const existing = await Promise.resolve().then(() => (init_fleet(), exports_fleet)).then((m) => m.readFleetState({ session, config: resolution2.config }));
-      const wave = existing ? existing.wave + 1 : 1;
-      const id = `fleet-${new Date().toISOString().replace(/[:.]/g, "-")}`;
-      const tasks = parsedArgs.tasks.map((t, i) => ({
-        id: `${id}-task-${i + 1}`,
-        title: t.title,
-        description: t.description,
-        scope: t.scope
-      }));
-      const state = {
-        id,
+      const { log, wave } = await writeFleetWave({
+        session,
+        config: resolution2.config,
         objective: parsedArgs.objective,
-        wave,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        tasks
-      };
-      await writeFleetState({ session, config: resolution2.config, state });
-      const instructions = formatFleetDispatchInstructions(state);
-      return createSuccessResult2(instructions, `Fleet ${id} registered with ${tasks.length} task(s).`);
+        tasks: parsedArgs.tasks
+      });
+      const instructions = formatFleetDispatchInstructions(log, wave);
+      return createSuccessResult2(instructions, `Fleet ${log.id} wave ${wave.wave} registered with ${wave.tasks.length} task(s).`);
+    }
+  };
+  const fleetStatusTool = {
+    name: "openagent_fleet_status",
+    description: "Read the current fleet log: all waves, tasks, and their statuses. Use after dispatching builders to check progress.",
+    parameters: {
+      type: "object",
+      properties: {},
+      required: []
+    },
+    handler: async () => {
+      const session = getSession();
+      if (!isOpenAgentWorkspaceAvailable(session)) {
+        const message = formatOpenAgentWorkspaceRequirement("openagent_fleet_status");
+        return createFailureResult2(message, message);
+      }
+      const resolution2 = loadOpenAgentConfig(resolveCwd2(initialCwd));
+      const log = await readFleetLog({ session, config: resolution2.config });
+      if (!log) {
+        return createSuccessResult2("No active fleet log.", "No active fleet.");
+      }
+      const lines = [
+        `Fleet: ${log.id}`,
+        `Objective: ${log.objective}`,
+        `Created: ${log.createdAt}  Updated: ${log.updatedAt}`,
+        `Waves: ${log.waves.length}`,
+        ""
+      ];
+      for (const wave of log.waves) {
+        lines.push(`Wave ${wave.wave} — ${wave.objective} (${wave.tasks.length} tasks)`);
+        for (const task of wave.tasks) {
+          const status = task.status.toUpperCase().padEnd(10);
+          const notes = task.notes ? ` — ${task.notes}` : "";
+          lines.push(`  [${status}] ${task.id}: ${task.title}${notes}`);
+        }
+        lines.push("");
+      }
+      const text = lines.join(`
+`);
+      return createSuccessResult2(text, `Fleet log has ${log.waves.length} wave(s).`);
+    }
+  };
+  const fleetCompleteTool = {
+    name: "openagent_fleet_complete",
+    description: "Mark a fleet task as completed or failed. Call this after reading and verifying a builder agent's output. task_id must match a task id from the fleet log.",
+    parameters: {
+      type: "object",
+      properties: {
+        task_id: {
+          type: "string",
+          description: "The task id to update (from openagent_fleet_status)."
+        },
+        status: {
+          type: "string",
+          enum: ["completed", "failed"],
+          description: "The outcome of the task."
+        },
+        notes: {
+          type: "string",
+          description: "Optional short notes about the outcome or any follow-up needed."
+        }
+      },
+      required: ["task_id", "status"]
+    },
+    handler: async (args2) => {
+      const session = getSession();
+      if (!isOpenAgentWorkspaceAvailable(session)) {
+        const message = formatOpenAgentWorkspaceRequirement("openagent_fleet_complete");
+        return createFailureResult2(message, message);
+      }
+      const taskId = args2.task_id;
+      const status = args2.status;
+      const notes = args2.notes;
+      const resolution2 = loadOpenAgentConfig(resolveCwd2(initialCwd));
+      const result = await updateFleetTaskStatus({
+        session,
+        config: resolution2.config,
+        taskId,
+        status,
+        notes
+      });
+      if (!result.found) {
+        return createFailureResult2(`Task "${taskId}" not found in fleet log.`, `Task not found.`);
+      }
+      return createSuccessResult2(`Task "${taskId}" marked as ${status}.${notes ? ` Notes: ${notes}` : ""}`, `Task ${status}.`);
     }
   };
   const planReviewTool = {
@@ -7596,6 +7720,8 @@ ${formatted}`);
     workspaceNoteTool,
     routePhaseTool,
     fleetTool,
+    fleetStatusTool,
+    fleetCompleteTool,
     planReviewTool,
     doctorTool,
     memoryWriteTool,
@@ -7646,6 +7772,14 @@ var session = await joinSession({
     bufferExhaustionThreshold: OPENAGENT_BUFFER_EXHAUSTION_THRESHOLD
   },
   onPermissionRequest: createPermissionHandler({ initialCwd }),
+  onUserInputRequest: async (request) => {
+    try {
+      const result = await getSession().ui.input(request.question);
+      return { answer: result ?? "", wasFreeform: true };
+    } catch {
+      return { answer: "", wasFreeform: true };
+    }
+  },
   systemMessage: {
     mode: "append",
     content: buildSystemPrompt(initialResolution.config)
@@ -7675,7 +7809,7 @@ session.on("session.idle", async (event) => {
   if (!loopState) {
     return;
   }
-  const messages = await session.getMessages();
+  const messages = await session.getEvents();
   const lastAssistantMessage = [...messages].reverse().find((message) => message.type === "assistant.message");
   const lastContent = lastAssistantMessage && lastAssistantMessage.type === "assistant.message" ? lastAssistantMessage.data.content : "";
   if (lastContent.includes(OPENAGENT_LOOP_DONE_SENTINEL)) {
@@ -7733,7 +7867,7 @@ session.on("session.usage_info", async (event) => {
 session.on("session.compaction_start", async () => {
   noteOpenAgentCompactionStart();
   await session.log("OpenAgent started a preemptive compaction pass.", {
-    ephemeral: true
+    level: "info"
   });
 });
 session.on("session.compaction_complete", async (event) => {
@@ -7744,8 +7878,7 @@ session.on("session.compaction_complete", async (event) => {
     ...event.data
   });
   await session.log(result.message, {
-    level: event.data.success ? "info" : "warning",
-    ephemeral: true
+    level: event.data.success ? "info" : "warning"
   });
 });
 session.on("session.error", async (event) => {

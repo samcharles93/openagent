@@ -121,7 +121,7 @@ export async function runOpenAgentDoctor(args: {
     "",
     `cwd: ${cwd}`,
     `workspace path: ${session.workspacePath ?? "disabled"}`,
-    `current mode: ${mode.mode}`,
+    `current mode: ${mode}`,
     `current model: ${model.modelId ?? "host default"}`,
     `current agent: ${agent.agent?.name ?? "host default"}`,
     `plan path: ${plan.path ?? "not available"}`,
@@ -162,7 +162,7 @@ export async function runOpenAgentDoctor(args: {
         : "Doctor completed without missing binary checks. If doctor output reveals recurring config or workflow confusion, promote that guidance into rules or AGENTS.",
     evidence: [
       `Report path: ${reportWorkspacePath ?? "not written to workspace"}`,
-      `Current mode: ${mode.mode}`,
+      `Current mode: ${mode}`,
       `Current agent: ${agent.agent?.name ?? "host default"}`,
     ],
     recommendations: [

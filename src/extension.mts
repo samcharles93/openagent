@@ -55,6 +55,14 @@ const session = await joinSession({
     bufferExhaustionThreshold: OPENAGENT_BUFFER_EXHAUSTION_THRESHOLD,
   },
   onPermissionRequest: createPermissionHandler({ initialCwd }),
+  onUserInputRequest: async (request) => {
+    try {
+      const result = await getSession().ui.input(request.question);
+      return { answer: result ?? "", wasFreeform: true };
+    } catch {
+      return { answer: "", wasFreeform: true };
+    }
+  },
   systemMessage: {
     mode: "append",
     content: buildSystemPrompt(initialResolution.config),
@@ -92,7 +100,7 @@ session.on("session.idle", async (event) => {
     return;
   }
 
-  const messages = await session.getMessages();
+  const messages = await session.getEvents();
   const lastAssistantMessage = [...messages]
     .reverse()
     .find((message) => message.type === "assistant.message");
@@ -170,7 +178,7 @@ session.on("session.usage_info", async (event) => {
 session.on("session.compaction_start", async () => {
   noteOpenAgentCompactionStart();
   await session.log("OpenAgent started a preemptive compaction pass.", {
-    ephemeral: true,
+    level: "info",
   });
 });
 
@@ -183,7 +191,6 @@ session.on("session.compaction_complete", async (event) => {
   });
   await session.log(result.message, {
     level: event.data.success ? "info" : "warning",
-    ephemeral: true,
   });
 });
 

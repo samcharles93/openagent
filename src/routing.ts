@@ -342,8 +342,8 @@ export async function routeOpenAgentPhase(args: {
   const fromAgent = inferAgentName(currentAgentResult.agent?.name);
   const fromPhase =
     existingState?.currentPhase ?? inferOpenAgentPhase(currentAgentResult.agent?.name);
-  const fromMode = isOpenAgentMode(currentModeResult.mode)
-    ? currentModeResult.mode
+  const fromMode = isOpenAgentMode(currentModeResult)
+    ? currentModeResult
     : PHASE_DEFINITIONS[fromPhase].mode;
   const targetDefinition = PHASE_DEFINITIONS[request.phase];
   const targetAgent = resolveTargetAgent(request.phase, request.agent);
@@ -392,7 +392,7 @@ export async function routeOpenAgentPhase(args: {
     config,
   });
 
-  if (targetMode !== currentModeResult.mode) {
+  if (targetMode !== currentModeResult) {
     await session.rpc.mode.set({ mode: targetMode });
   }
 
@@ -445,8 +445,8 @@ export async function formatOpenAgentRoutingStatus(args: {
   const currentPhase =
     state?.currentPhase ?? inferOpenAgentPhase(currentAgentResult.agent?.name);
   const currentAgent = inferAgentName(currentAgentResult.agent?.name);
-  const currentMode = isOpenAgentMode(currentModeResult.mode)
-    ? currentModeResult.mode
+  const currentMode = isOpenAgentMode(currentModeResult)
+    ? currentModeResult
     : PHASE_DEFINITIONS[currentPhase].mode;
 
   const lines = [

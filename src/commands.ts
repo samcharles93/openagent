@@ -332,7 +332,7 @@ export function createCommands(args: {
           [
             "OpenAgent status",
             formatConfigSummary(resolution),
-            `mode: ${mode.mode}`,
+            `mode: ${mode}`,
             `model: ${model.modelId ?? "host default"}`,
             `agent: ${agent.agent?.name ?? "host default"}`,
             `workspace path: ${session.workspacePath ?? "disabled"}`,
@@ -688,10 +688,10 @@ export function createCommands(args: {
           fromAgent,
           fromPhase,
           fromMode:
-            currentModeResult.mode === "interactive" ||
-            currentModeResult.mode === "plan" ||
-            currentModeResult.mode === "autopilot"
-              ? currentModeResult.mode
+            currentModeResult === "interactive" ||
+            currentModeResult === "plan" ||
+            currentModeResult === "autopilot"
+              ? currentModeResult
               : "interactive",
           refs: [result.handoffWorkspacePath],
           latestHandoffPath: result.handoffWorkspacePath,

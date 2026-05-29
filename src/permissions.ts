@@ -32,14 +32,17 @@ type McpPermissionRequest = PermissionRequest & {
 
 function deny(message: string): PermissionRequestResult {
   return {
-    kind: "denied-by-permission-request-hook",
-    message,
-    interrupt: true,
+    kind: "reject",
+    feedback: message,
   };
 }
 
 function approve(): PermissionRequestResult {
   return { kind: "approved" };
+}
+
+function defer(): PermissionRequestResult {
+  return { kind: "no-result" };
 }
 
 function isInsideRoot(candidatePath: string, rootPath: string): boolean {
@@ -133,23 +136,23 @@ export function createPermissionHandler(args: {
       case "read": {
         const targetPath = getStringField(request as ReadPermissionRequest, "path");
         if (!targetPath) {
-          return deny("OpenAgent could not determine the requested read path.");
+          return defer();
         }
 
         return allowedRoots.some((root) => isInsideRoot(targetPath, root))
           ? approve()
-          : deny("OpenAgent only auto-approves reads inside the repo or session workspace.");
+          : defer();
       }
 
       case "write": {
         const fileName = getStringField(request as WritePermissionRequest, "fileName");
         if (!fileName) {
-          return deny("OpenAgent could not determine the requested write path.");
+          return defer();
         }
 
         return allowedRoots.some((root) => isInsideRoot(fileName, root))
           ? approve()
-          : deny("OpenAgent only auto-approves writes inside the repo or session workspace.");
+          : defer();
       }
 
       case "shell": {
@@ -161,7 +164,7 @@ export function createPermissionHandler(args: {
         }
 
         if (hasPossibleUrls(shellRequest.possibleUrls)) {
-          return deny("OpenAgent does not auto-approve shell commands that may access external URLs.");
+          return defer();
         }
 
         if (
@@ -171,26 +174,24 @@ export function createPermissionHandler(args: {
           return approve();
         }
 
-        return deny(
-          "OpenAgent only auto-approves repo-local shell commands or commands classified as read-only.",
-        );
+        return defer();
       }
 
       case "mcp": {
         const mcpRequest = request as McpPermissionRequest;
         return mcpRequest.readOnly === true
           ? approve()
-          : deny("OpenAgent only auto-approves read-only MCP tool calls.");
+          : defer();
       }
 
       case "custom-tool":
         return approve();
 
       case "url":
-        return deny("OpenAgent does not auto-approve direct URL access.");
+        return defer();
 
       default:
-        return deny(`OpenAgent does not auto-approve ${request.kind} permissions.`);
+        return defer();
     }
   };
 }
